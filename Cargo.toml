@@ -18,6 +18,8 @@ required-features = ["gui"]
 default = ["sqlite-system"]
 sqlite-system = ["dep:rusqlite"]
 gui = ["dep:slint", "dep:slint-build"]
+vad-wavekat = ["dep:wavekat-vad"]
+vad-silero = ["vad-wavekat", "wavekat-vad/silero", "dep:ort"]
 
 [dependencies]
 base64 = "0.23"
@@ -37,6 +39,8 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "ansi", "env-filter", "registry", "std"] }
 slint = { version = "=1.18.1", optional = true, default-features = false, features = ["std", "compat-1-18", "backend-winit", "renderer-femtovg", "renderer-software", "accessibility"] }
 earshot = "1.2.2"
+wavekat-vad = { version = "=0.1.17", optional = true, default-features = false, features = ["earshot"] }
+ort = { version = "=2.0.0-rc.12", optional = true, default-features = false, features = ["std", "ndarray", "load-dynamic", "api-24"] }
 
 [build-dependencies]
 slint-build = { version = "=1.18.1", optional = true }
