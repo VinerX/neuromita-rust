@@ -9,6 +9,7 @@ use neuromita::{
     app::{ApplicationConfig, ApplicationLifecycle, RuntimeLimits},
     audio::{
         device::{AudioCapture, AudioPlayback, DeviceFuture},
+        score::ScoreError,
         segment::{SegmentConfig, SpeechMode, SpeechSegment, SpeechSegmenter, VoiceGate},
         session::{
             ChatReplyTarget, SpeechConversation, SpeechFuture, SpeechInputHandler, SpeechRoute,
@@ -76,11 +77,11 @@ impl AudioCapture for Capture {
 
 struct Gate;
 impl VoiceGate for Gate {
-    fn inspect(&mut self, frame: &MonoPcm16Frame) -> VoiceDecision {
-        VoiceDecision {
+    fn inspect(&mut self, frame: &MonoPcm16Frame) -> Result<VoiceDecision, ScoreError> {
+        Ok(VoiceDecision {
             probability: f32::from(frame[0] != 0),
             speech: frame[0] != 0,
-        }
+        })
     }
     fn reset(&mut self) {}
 }
@@ -154,11 +155,11 @@ async fn fixture_audio_pipeline_and_old_target_cannot_publish_into_restarted_cor
     );
     let config = SegmentConfig {
         mode: SpeechMode::Automatic,
-        pre_roll_frames: 3,
-        start_voice_frames: 2,
-        end_silence_frames: 3,
-        min_segment_frames: 2,
-        max_segment_frames: 32,
+        pre_roll_samples: 3 * 256,
+        start_voice_samples: 2 * 256,
+        end_silence_samples: 3 * 256,
+        min_segment_samples: 2 * 256,
+        max_segment_samples: 32 * 256,
     };
     let frames = [
         vec![[0; FRAME_SAMPLES]; 4],

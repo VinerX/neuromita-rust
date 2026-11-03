@@ -2,6 +2,10 @@
 
 No Cargo.toml, Cargo.lock, .cargo/config.toml or vendor changes are included in the first domain increment.
 
+Spike status (2026-11-03): the delta was resolved and built in the separate
+`codex/spike-vad-deps` worktree; see `issue-60-dependency-spike-20261103.md` for
+measured results. The production manifest, lock and vendor remain unchanged.
+
 Proposed root manifest delta:
 
 ```toml

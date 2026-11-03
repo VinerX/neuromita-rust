@@ -127,6 +127,10 @@ impl<P: VadScoreProvider> ScoreFrames<P> {
         self.pending.len()
     }
 
+    pub fn frame_samples(&self) -> usize {
+        self.frame_samples
+    }
+
     pub fn reset(&mut self) {
         self.pending.clear();
         self.scored_samples = 0;

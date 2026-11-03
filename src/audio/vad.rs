@@ -18,6 +18,10 @@ impl VoiceThreshold {
         }
         Ok(Self(value))
     }
+
+    pub fn value(self) -> f32 {
+        self.0
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
