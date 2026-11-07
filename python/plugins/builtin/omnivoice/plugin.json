@@ -1,0 +1,8 @@
+{
+  "id": "omnivoice",
+  "name": "Omnivoice",
+  "version": "0.1.0",
+  "kind": "tts",
+  "entrypoint": "plugin.py",
+  "api_version": 1
+}

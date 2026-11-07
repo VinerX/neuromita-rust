@@ -1,0 +1,55 @@
+import { ScrollView } from "std-widgets.slint";
+import { SandboxTheme } from "theme.slint";
+import { Caption, HeaderButton, Centered } from "controls.slint";
+import { ChatRow, ChatStatus } from "models.slint";
+import { I18n } from "../i18n.slint";
+
+export global ConversationUi {
+    in-out property <int> confirmation;
+    in-out property <int> count;
+    in-out property <string> diagnostics;
+    in-out property <bool> history;
+    callback preview(int);
+    callback confirm();
+    callback abort();
+    callback trace();
+}
+
+export component ConversationDialog inherits Rectangle {
+    in property <[ChatRow]> messages;
+    background: #00000099;
+    TouchArea { }
+    VerticalLayout { padding: 30px; spacing: 0px; alignment: center;
+        HorizontalLayout { padding: 0px; spacing: 0px; alignment: center;
+            Rectangle {
+                width: min(720px, parent.width);
+                height: ConversationUi.confirmation > 0 ? 230px : min(600px, root.height - 60px);
+                background: SandboxTheme.panel.with-alpha(1); border-radius: 16px; border-width: 1px; border-color: SandboxTheme.border;
+                VerticalLayout {
+                    padding: 20px; spacing: 16px;
+                    Caption { font-size: 19px; font-weight: 700;
+                        text: ConversationUi.confirmation == 1 ? I18n.i18n("conversation.clear.title", "Очистить видимую историю?") : ConversationUi.confirmation == 2 ? I18n.i18n("conversation.reset.title", "Сбросить контекст персонажа?") : ConversationUi.history ? I18n.i18n("sandbox.history", "История") : I18n.i18n("sandbox.action.last", "Посмотреть последний запрос");
+                    }
+                    if ConversationUi.confirmation > 0: Text {
+                        text: ConversationUi.confirmation == 1 ? I18n.i18n("conversation.clear.body", "Сообщения будут скрыты только для этого персонажа. Исходные события сохранятся.") + " (" + ConversationUi.count + ")" : I18n.i18n("conversation.reset.body", "Начнётся новый контекст персонажа. Прежние события сохранятся; запросы со старым контекстом потеряют актуальность.");
+                        color: SandboxTheme.text; font-family: SandboxTheme.font-family; font-size: 13px; wrap: word-wrap;
+                    }
+                    if ConversationUi.confirmation == 0: ScrollView {
+                        content-width: self.visible-width;
+                        if !ConversationUi.history: Text { text: ConversationUi.diagnostics; color: SandboxTheme.text; font-family: "Consolas"; font-size: 12px; wrap: word-wrap; }
+                        if ConversationUi.history: VerticalLayout { padding: 0px; spacing: 12px; alignment: start;
+                            for message in root.messages: VerticalLayout { padding: 0px;
+                                if message.status == ChatStatus.history || message.status == ChatStatus.success || message.status == ChatStatus.voice-error: Text { width: parent.width; text: message.sequence + " · " + message.text; color: SandboxTheme.text; font-family: SandboxTheme.font-family; font-size: 13px; wrap: word-wrap; }
+                            }
+                        }
+                    }
+                    HorizontalLayout { height: 38px; spacing: 12px;
+                        Rectangle { horizontal-stretch: 1; }
+                        if ConversationUi.confirmation > 0: Centered { HeaderButton { text: I18n.i18n("conversation.confirm", "Подтвердить"); activated => { ConversationUi.confirm(); } } }
+                        Centered { HeaderButton { text: I18n.i18n("common.dismiss", "Закрыть"); activated => { ConversationUi.abort(); ConversationUi.history = false; ConversationUi.diagnostics = ""; } } }
+                    }
+                }
+            }
+        }
+    }
+}

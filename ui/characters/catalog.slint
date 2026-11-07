@@ -1,0 +1,24 @@
+import { I18n } from "../i18n.slint";
+
+export struct CharacterOption { index: int, id: string, name: string, name-key: string, conversation-name: string, conversation-key: string, initial: string }
+
+export global CharacterCatalog {
+    in-out property <[CharacterOption]> entries;
+    property <image> empty-avatar;
+    public pure function name(entry: CharacterOption) -> string { return entry.id == "" ? "" : I18n.i18n(entry.name-key, entry.name); }
+    public pure function conversation-name(entry: CharacterOption) -> string { return entry.id == "" ? "" : I18n.i18n(entry.conversation-key, entry.conversation-name); }
+    public pure function has-avatar(id: string) -> bool { return id == "Crazy" || id == "Kind" || id == "Cappie" || id == "ShortHair" || id == "Mila" || id == "Sleepy" || id == "Ghost"; }
+    public pure function avatar(id: string) -> image {
+        if (id == "Crazy") { return @image-url("../../assets/avatars/crazy.png"); }
+        if (id == "Kind") { return @image-url("../../assets/avatars/kind.png"); }
+        if (id == "Cappie") { return @image-url("../../assets/avatars/cappie.png"); }
+        if (id == "ShortHair") { return @image-url("../../assets/avatars/shorthair.png"); }
+        if (id == "Mila") { return @image-url("../../assets/avatars/mila.png"); }
+        if (id == "Sleepy") { return @image-url("../../assets/avatars/sleepy.png"); }
+        if (id == "Ghost") { return @image-url("../../assets/avatars/ghost.png"); }
+        return CharacterCatalog.empty-avatar;
+    }
+    public pure function matches(entry: CharacterOption, query: string) -> bool {
+        return query == "" || CharacterCatalog.name(entry).to-lowercase().replace-all(query.to-lowercase(), "") != CharacterCatalog.name(entry).to-lowercase() || entry.id.to-lowercase().replace-all(query.to-lowercase(), "") != entry.id.to-lowercase();
+    }
+}

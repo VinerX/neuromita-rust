@@ -13,7 +13,7 @@ use neuromita::{
     app::{
         ApplicationConfig, ApplicationError, ApplicationLifecycle, ApplicationStatus, RuntimeLimits,
     },
-    character::{CharacterContext, CharacterId},
+    character::CharacterId,
     generation::{
         GenerationError, GenerationPreset, GenerationProvider, ProviderFuture, ProviderKind,
         ProviderTemplate, ResponseGenerator,
@@ -70,6 +70,9 @@ impl Storage {
 }
 
 impl SettingsRepository for Storage {
+    fn migrate(&self) -> Result<(), SettingsError> {
+        self.inner.migrate()
+    }
     fn load(&self) -> Result<StoredSettings, SettingsError> {
         Self::block(&self.load_gate);
         self.inner.load()
@@ -84,7 +87,7 @@ impl SettingsRepository for Storage {
 }
 
 struct Call {
-    context: CharacterContext,
+    context: neuromita::generation::GenerationInput,
     model: String,
     reply: oneshot::Sender<Arc<str>>,
 }
@@ -97,11 +100,13 @@ impl GenerationProvider for ControlledProvider {
     }
     fn generate(
         &self,
-        context: CharacterContext,
+        context: neuromita::generation::GenerationInput,
         template: ProviderTemplate,
     ) -> ProviderFuture<'_> {
         Box::pin(async move {
-            let ProviderTemplate::Gemini(template) = template;
+            let ProviderTemplate::Gemini(template) = template else {
+                panic!("fixture requires Gemini")
+            };
             let (reply, receive) = oneshot::channel();
             self.0
                 .send(Call {
@@ -113,6 +118,7 @@ impl GenerationProvider for ControlledProvider {
             receive
                 .await
                 .map_err(|_| GenerationError::Transport("fixture dropped".into()))
+                .map(|text| neuromita::generation::StructuredResponse::spoken(text.to_string()))
         })
     }
 }
@@ -156,14 +162,14 @@ fn config(
 }
 
 fn initial() -> SettingsSource {
-    SettingsSource::Initial(neuromita::settings::AppSettings::initial_profile())
+    SettingsSource::initial(neuromita::settings::AppSettings::initial_profile())
 }
 
-fn reply(model: &str, text: &str) -> Result<RequestHandle, SubmitError> {
+fn reply(_model: &str, text: &str) -> Result<RequestHandle, SubmitError> {
+    let event = ChatApi::publish_message(CharacterId::Crazy, UserInput::new(text.into()).unwrap())?;
     ChatApi::reply(ReplyRequest::new(
-        CharacterId::Mita,
-        preset(model),
-        UserInput::new(text.into()).unwrap(),
+        CharacterId::Crazy,
+        event,
         RequestSource::Presenter,
     ))
 }
@@ -210,14 +216,15 @@ async fn static_apis_restart_without_crossing_application_lifetimes() {
     let old_chat = app.presenter().chat.clone();
     let old_characters = app.presenter().characters.clone();
     let old_volume = app.presenter().settings.voice.volume.clone();
-    let old_character = CharacterApi::get(CharacterId::Mita).unwrap();
+    let old_character = CharacterApi::get(CharacterId::Crazy).unwrap();
     let old_server = app.server().clone();
     let listen = old_server.address();
     let mut old_settings = SettingsApi::observe().unwrap();
 
     let accepted = reply("first", "accepted before restart").unwrap();
     let call = next(&mut calls).await;
-    assert!(call.context.history.events.is_empty());
+    assert_eq!(call.context.history.events.len(), 1);
+    assert_eq!(call.context.view.count(), 1);
     call.reply
         .send(Arc::from("first accepted response"))
         .unwrap();
@@ -246,7 +253,13 @@ async fn static_apis_restart_without_crossing_application_lifetimes() {
     .await
     .unwrap()
     .unwrap();
-    assert_eq!(ApplicationLifecycle::status(), ApplicationStatus::Stopping);
+    timeout(Duration::from_secs(5), async {
+        while ApplicationLifecycle::status() != ApplicationStatus::Stopping {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
     assert!(matches!(
         reply("first", "during shutdown"),
         Err(SubmitError::Stopped)
@@ -255,7 +268,7 @@ async fn static_apis_restart_without_crossing_application_lifetimes() {
         SettingsApi::snapshot::<VoiceSettings>(),
         Err(SettingsError::Stopped)
     ));
-    assert!(CharacterApi::get(CharacterId::Mita).is_err());
+    assert!(CharacterApi::get(CharacterId::Crazy).is_err());
     let concurrent_rejections = tokio::task::spawn_blocking(|| {
         std::thread::scope(|scope| {
             for _ in 0..16 {
@@ -269,7 +282,7 @@ async fn static_apis_restart_without_crossing_application_lifetimes() {
                             SettingsApi::snapshot::<VoiceSettings>(),
                             Err(SettingsError::Stopped)
                         ));
-                        assert!(CharacterApi::get(CharacterId::Mita).is_err());
+                        assert!(CharacterApi::get(CharacterId::Crazy).is_err());
                     }
                 });
             }
@@ -337,7 +350,7 @@ async fn static_apis_restart_without_crossing_application_lifetimes() {
     assert_ne!(app.at().branch_id, old_anchor.branch_id);
     assert!(app.timeline().is_empty());
     assert_eq!(
-        CharacterApi::get(CharacterId::Mita)
+        CharacterApi::get(CharacterId::Crazy)
             .unwrap()
             .state()
             .await
@@ -357,7 +370,7 @@ async fn static_apis_restart_without_crossing_application_lifetimes() {
     assert!(ChatApi::trace(accepted.id()).unwrap().is_none());
     assert!(
         old_chat
-            .reply(CharacterId::Mita, "stale presenter".into())
+            .reply(CharacterId::Crazy, "stale presenter".into())
             .is_err()
     );
     assert!(old_chat.cancel(active.id()).is_err());
@@ -368,7 +381,7 @@ async fn static_apis_restart_without_crossing_application_lifetimes() {
     assert!(
         old_characters
             .observe(
-                CharacterId::Mita,
+                CharacterId::Crazy,
                 UserInput::new("stale observation".into()).unwrap()
             )
             .await
@@ -386,7 +399,8 @@ async fn static_apis_restart_without_crossing_application_lifetimes() {
     let request = reply("second", "new application").unwrap();
     let call = next(&mut calls).await;
     assert_eq!(call.model, "second");
-    assert!(call.context.history.events.is_empty());
+    assert_eq!(call.context.history.events.len(), 1);
+    assert_eq!(call.context.view.count(), 1);
     call.reply
         .send(Arc::from("second accepted response"))
         .unwrap();
@@ -408,7 +422,7 @@ async fn static_apis_restart_without_crossing_application_lifetimes() {
     let request = app
         .presenter()
         .chat
-        .reply(CharacterId::Mita, "third application".into())
+        .reply(CharacterId::Crazy, "third application".into())
         .unwrap();
     let call = next(&mut calls).await;
     assert_eq!(call.model, "third");
@@ -441,7 +455,7 @@ async fn static_apis_restart_without_crossing_application_lifetimes() {
         SettingsApi::snapshot::<VoiceSettings>(),
         Err(SettingsError::Stopped)
     ));
-    assert!(CharacterApi::get(CharacterId::Mita).is_err());
+    assert!(CharacterApi::get(CharacterId::Crazy).is_err());
     assert!(matches!(
         ApplicationLifecycle::start(config("unused", &sent, &storage, initial(), address)).await,
         Err(ApplicationError::Busy)
@@ -520,10 +534,18 @@ async fn static_apis_restart_without_crossing_application_lifetimes() {
         .unwrap()
         .unwrap();
     assert!(line.contains("connected"));
-    write.write_all(b"test\n").await.unwrap();
+    let command = serde_json::json!({
+        "command_id": uuid::Uuid::new_v4(),
+        "command": "initiate",
+        "character": "Crazy",
+    });
+    write
+        .write_all(format!("{command}\n").as_bytes())
+        .await
+        .unwrap();
     let call = next(&mut calls).await;
     assert_eq!(call.model, "after-save-failure");
-    assert_eq!(call.context.current_input.as_ref(), "test");
+    assert!(call.context.current_input.is_empty());
     call.reply.send(Arc::from("network after restart")).unwrap();
     timeout(Duration::from_secs(5), async {
         loop {

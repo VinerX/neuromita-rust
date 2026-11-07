@@ -1,0 +1,257 @@
+import { SettingsTheme } from "theme.slint";
+import { Card, SettingsButton, SettingsLabel, SectionHeading } from "form-controls.slint";
+import { SettingsScrollView } from "scroll-view.slint";
+import { Glyph, Centered } from "../sandbox/controls.slint";
+import { ActionSurface } from "../components/controls.slint";
+import { I18n } from "../i18n.slint";
+
+export struct AiHardwareDevice {
+    name: string,
+    vendor: string,
+    cuda: string,
+    directml: string,
+    capability: string,
+    vram: string,
+}
+
+export global AiEngineUi {
+    in-out property <[AiHardwareDevice]> devices;
+    in-out property <bool> detecting: false;
+    in-out property <string> hardware-error;
+    in-out property <string> process-status;
+    in-out property <string> process-mode;
+    in-out property <bool> process-managed: false;
+    in-out property <bool> process-busy: false;
+    in-out property <bool> mode-locked: true;
+    in-out property <string> environment-path;
+    in-out property <string> environment-size;
+    in-out property <string> maintenance-status;
+    in-out property <bool> maintenance-enabled: false;
+    in-out property <bool> hub-available: false;
+    in-out property <bool> maintenance-open: true;
+    in-out property <string> backend-notice;
+    callback refresh-hardware();
+    callback open-hub();
+    callback apply-mode(string);
+    callback reset-environments();
+}
+
+component EngineIcon inherits Rectangle {
+    in property <string> glyph;
+    width: 44px;
+    height: 44px;
+    background: SettingsTheme.icon-background;
+    border-width: 1px;
+    border-color: SettingsTheme.icon-border;
+    border-radius: 12px;
+    Glyph { width: parent.width; height: parent.height; text: root.glyph; color: SettingsTheme.icon; font-size: 21px; }
+}
+
+component EngineChip inherits Rectangle {
+    in property <string> label;
+    in property <string> kind;
+    height: 24px;
+    width: max(34px, chip-label.preferred-width + 17px);
+    border-radius: 7px;
+    border-width: 1px;
+    background: root.kind == "gpu" || root.kind == "success" ? #43be771f : root.kind == "cuda" ? #4a75e624 : root.kind == "warning" ? #dc913a1f : #ffffff0e;
+    border-color: root.kind == "gpu" || root.kind == "success" ? #50d2873d : root.kind == "cuda" ? #5b8bff47 : root.kind == "warning" ? #f0a64a42 : #ffffff17;
+    chip-label := SettingsLabel {
+        width: parent.width;
+        height: parent.height;
+        text: root.label;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        font-size: 11px;
+        font-weight: 650;
+        color: root.kind == "gpu" || root.kind == "success" ? #a8f0c6 : root.kind == "cuda" ? #b9cfff : root.kind == "warning" ? #f3bd74 : SettingsTheme.text;
+    }
+}
+
+component EngineCardTitle inherits SettingsLabel {
+    font-size: 16px;
+    font-weight: 750;
+    color: SettingsTheme.text;
+}
+
+component EngineCardSubtitle inherits SettingsLabel {
+    font-size: 12px;
+    color: SettingsTheme.muted;
+    wrap: word-wrap;
+}
+
+export component AiEngineWorkspace inherits VerticalLayout {
+    spacing: 12px;
+
+    engine-scroll := SettingsScrollView {
+        vertical-stretch: 1;
+        content-height: content.preferred-height;
+        content := VerticalLayout {
+            width: engine-scroll.visible-width;
+            padding-left: 2px;
+            padding-right: 2px;
+            padding-bottom: 2px;
+            spacing: 14px;
+            alignment: start;
+
+            Card {
+                height: max(116px, AiEngineUi.devices.length * 26px + 94px);
+                vertical-stretch: 0;
+                background: #111321;
+                HorizontalLayout {
+                    padding-left: 20px; padding-right: 16px; padding-top: 20px; padding-bottom: 18px; spacing: 16px;
+                    EngineIcon { glyph: "\u{f108}"; }
+                    VerticalLayout {
+                        padding: 0px; spacing: 7px; horizontal-stretch: 1; alignment: start;
+                        EngineCardTitle { text: I18n.i18n("settings.ai-engine.hardware", "Устройство и ускорение"); }
+                        EngineCardSubtitle { text: I18n.i18n("settings.ai-engine.hardware-detail", "Видеокарта и backend, доступные установленным AI-моделям."); }
+                        if AiEngineUi.detecting: EngineCardSubtitle { text: I18n.i18n("settings.ai-engine.detecting", "Определяем видеокарту и доступное ускорение…"); }
+                        if !AiEngineUi.detecting && AiEngineUi.devices.length == 0: EngineCardSubtitle {
+                            text: AiEngineUi.hardware-error == "" ? I18n.i18n("settings.ai-engine.no-gpu", "Видеокарта не обнаружена") : AiEngineUi.hardware-error;
+                        }
+                        for device in AiEngineUi.devices: HorizontalLayout {
+                            height: 24px; vertical-stretch: 0; spacing: 6px;
+                            Centered { EngineCardSubtitle { text: device.name; } }
+                            if device.vendor != "": EngineChip { label: device.vendor; kind: "gpu"; }
+                            if device.cuda != "": EngineChip { label: device.cuda; kind: "cuda"; }
+                            if device.directml != "": EngineChip { label: device.directml; }
+                            if device.capability != "": EngineChip { label: device.capability; }
+                            if device.vram != "": EngineChip { label: device.vram; }
+                        }
+                    }
+                    Centered { width: 32px;
+                        ActionSurface {
+                            width: 30px; height: 30px; label: I18n.i18n("settings.ai-engine.refresh", "Обновить аппаратный профиль");
+                            border-width: 1px; border-color: SettingsTheme.border; border-radius: 9px; background: SettingsTheme.button;
+                            Glyph { text: "\u{f2f1}"; width: 100%; height: 100%; color: SettingsTheme.icon; font-size: 14px; }
+                            activated => { AiEngineUi.refresh-hardware(); }
+                        }
+                    }
+                }
+            }
+
+            Card {
+                height: AiEngineUi.backend-notice == "" ? 134px : 176px;
+                vertical-stretch: 0;
+                background: #111321;
+                HorizontalLayout {
+                    padding: 20px; spacing: 16px;
+                    EngineIcon { glyph: "\u{f1b3}"; }
+                    VerticalLayout {
+                        padding: 0px; spacing: 8px; horizontal-stretch: 1; alignment: start;
+                        EngineCardTitle { text: I18n.i18n("settings.ai-engine.components", "Модели и компоненты"); }
+                        EngineCardSubtitle { text: I18n.i18n("settings.ai-engine.components-detail", "Установка и удаление моделей TTS, ASR, RAG и их зависимостей."); }
+                        if AiEngineUi.backend-notice != "": EngineCardSubtitle { text: AiEngineUi.backend-notice; color: #f0a64a; }
+                        Rectangle { height: 5px; }
+                        HorizontalLayout {
+                            height: 38px; vertical-stretch: 0; spacing: 0px;
+                            SettingsButton {
+                                width: 152px; height: 38px; horizontal-stretch: 0;
+                                text: I18n.i18n("settings.ai-engine.ai-hub", "Открыть AI Hub");
+                                glyph: "\u{f35d}";
+                                background: @linear-gradient(90deg, SettingsTheme.primary-start, SettingsTheme.primary-end);
+                                enabled: AiEngineUi.hub-available;
+                                activated => { AiEngineUi.open-hub(); }
+                            }
+                            Rectangle { horizontal-stretch: 1; }
+                        }
+                    }
+                }
+            }
+
+            Card {
+                height: 178px;
+                vertical-stretch: 0;
+                background: #111321;
+                HorizontalLayout {
+                    padding: 20px; spacing: 16px;
+                    EngineIcon { glyph: "\u{f0e8}"; }
+                    VerticalLayout {
+                        padding: 0px; spacing: 10px; horizontal-stretch: 1; alignment: start;
+                        HorizontalLayout { height: 24px;
+                            Centered { EngineCardTitle { text: I18n.i18n("settings.ai-engine.process-mode", "Режим процессов"); } }
+                            Rectangle { horizontal-stretch: 1; }
+                            EngineChip {
+                                label: AiEngineUi.process-status == "" ? I18n.i18n("settings.ai-engine.no-process", "Процессы не запущены") : AiEngineUi.process-status;
+                                kind: AiEngineUi.process-managed ? "success" : "warning";
+                            }
+                        }
+                        EngineCardSubtitle { text: I18n.i18n("settings.ai-engine.process-detail", "Как AI-контуры распределяются между процессами приложения."); }
+                        HorizontalLayout { height: 38px; spacing: 8px;
+                            mode := ActionSurface {
+                                height: 38px; horizontal-stretch: 1; label: I18n.i18n("settings.ai-engine.process-mode", "Режим процессов");
+                                border-radius: 9px; border-width: 1px; border-color: SettingsTheme.field-border; background: SettingsTheme.field;
+                                HorizontalLayout { padding-left: 10px; padding-right: 10px;
+                                    Centered { SettingsLabel { text: AiEngineUi.process-mode == "" ? I18n.i18n("settings.ai-engine.no-plan", "AI runtime не настроен") : AiEngineUi.process-mode == "split" ? I18n.i18n("settings.ai-engine.split", "Изолированные процессы (split)") : I18n.i18n("settings.ai-engine.shared", "Общий процесс (shared)"); horizontal-stretch: 1; } }
+                                    Centered { Glyph { text: "\u{f077}"; color: SettingsTheme.accent; font-size: 11px; } }
+                                }
+                                activated => { if (!AiEngineUi.mode-locked) { choices.show(); } }
+                                choices := PopupWindow {
+                                    y: mode.height + 2px; width: mode.width; height: 82px; close-policy: close-on-click-outside;
+                                    Rectangle { width: 100%; height: 100%; border-radius: 9px; border-width: 1px; border-color: SettingsTheme.border; background: SettingsTheme.popup;
+                                        VerticalLayout { padding: 4px; spacing: 2px;
+                                            for choice in [ { name: I18n.i18n("settings.ai-engine.shared", "Общий процесс (shared)"), id: "shared" }, { name: I18n.i18n("settings.ai-engine.split", "Изолированные процессы (split)"), id: "split" } ]: ActionSurface {
+                                                label: choice.name; height: 34px; border-radius: 5px;
+                                                background: self.hovered ? SettingsTheme.button-hover : transparent;
+                                                HorizontalLayout { padding-left: 12px; Centered { SettingsLabel { text: choice.name; } } }
+                                                activated => { AiEngineUi.process-mode = choice.id; choices.close(); }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            SettingsButton {
+                                width: 128px; height: 38px;
+                                enabled: !AiEngineUi.mode-locked && !AiEngineUi.process-busy;
+                                text: AiEngineUi.mode-locked ? I18n.i18n("settings.ai-engine.unavailable", "Недоступно") : I18n.i18n("settings.ai-engine.apply", "Применить");
+                                activated => { AiEngineUi.apply-mode(AiEngineUi.process-mode); }
+                            }
+                        }
+                        EngineCardSubtitle {
+                            text: AiEngineUi.process-mode == "" ? I18n.i18n("settings.ai-engine.no-plan-detail", "Режим процессов ещё не выбран. Сведения об оборудовании доступны независимо от AI runtime.") : AiEngineUi.process-mode == "split"
+                                ? I18n.i18n("settings.ai-engine.split-detail", "TTS, ASR, RAG и Beats получают отдельные процессы: падения и конфликты зависимостей изолированы, но расход RAM и VRAM выше.")
+                                : I18n.i18n("settings.ai-engine.shared-detail", "TTS, ASR, RAG и Beats работают в одном процессе и используют общий CUDA context. Это режим с минимальным расходом VRAM.");
+                            color: AiEngineUi.process-mode == "split" ? #f0a64a : SettingsTheme.muted;
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                vertical-stretch: 0;
+                background: SettingsTheme.workspace;
+                VerticalLayout { padding: 0px; spacing: 8px;
+                    ActionSurface {
+                        height: 32px; label: I18n.i18n("settings.ai-engine.maintenance", "Обслуживание AI-пакетов");
+                        background: transparent;
+                        border-width: 0px;
+                        HorizontalLayout { padding-left: 4px; padding-right: 9px;
+                            Centered { SettingsLabel { text: I18n.i18n("settings.ai-engine.maintenance", "Обслуживание AI-пакетов"); font-size: 13px; font-weight: 750; horizontal-stretch: 1; } }
+                            Rectangle { horizontal-stretch: 1; }
+                            Centered { Glyph { text: AiEngineUi.maintenance-open ? "\u{f078}" : "\u{f054}"; color: SettingsTheme.arrow; font-size: 11px; } }
+                        }
+                        activated => { AiEngineUi.maintenance-open = !AiEngineUi.maintenance-open; }
+                    }
+                    Rectangle { height: 1px; background: SettingsTheme.divider; }
+                    if AiEngineUi.maintenance-open: VerticalLayout { padding-left: 28px; padding-right: 10px; padding-top: 2px; spacing: 10px;
+                    EngineCardSubtitle { text: I18n.i18n("settings.ai-engine.maintenance-detail", "Полный сброс установленных AI-зависимостей. Основное окружение приложения Lib/core не затрагивается."); }
+                    Rectangle { height: 50px; border-radius: 9px; border-width: 1px; border-color: SettingsTheme.field-border; background: #ffffff06;
+                        VerticalLayout { padding-left: 12px; padding-top: 5px; spacing: 2px;
+                            EngineCardSubtitle { text: AiEngineUi.environment-path == "" ? "—" : AiEngineUi.environment-path; overflow: elide; }
+                            EngineCardSubtitle { text: AiEngineUi.environment-size == "" ? "—" : AiEngineUi.environment-size; }
+                        }
+                    }
+                    EngineCardSubtitle { text: AiEngineUi.maintenance-status == "" ? I18n.i18n("settings.ai-engine.maintenance-unavailable", "Обслуживание недоступно") : AiEngineUi.maintenance-status; }
+                    SettingsButton {
+                        width: parent.width - 48px; height: 35px;
+                        text: I18n.i18n("settings.ai-engine.delete-env", "Удалить все AI-окружения");
+                        background: #db4348;
+                        enabled: AiEngineUi.maintenance-enabled;
+                        activated => { AiEngineUi.reset-environments(); }
+                    }
+                    }
+                }
+            }
+        }
+    }
+}

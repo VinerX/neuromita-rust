@@ -6,6 +6,33 @@
 
 ## Уже проверенный первый срез
 
+### Аудиовход и общая геометрия настроек, 2026-11-05
+
+- [x] Нативный каталог CPAL: настоящие устройства, friendly names, endpoint IDs и доступные backends; зависимость в vendor.
+- [x] Core-owned AudioInputOwner и функциональный AudioInputPresenter; loopback, RMS/watch, остановка и восстановление распознавания.
+- [x] Удалён скрытый десятисекундный clamp; согласованы ограничения сегментов, WAV и Python IPC.
+- [x] Высоты строк по содержимому, исходный NumberStepper/QSS, видимые обводки checkbox.
+- [x] Общий viewport/колонка скроллбара, исправленные границы контента Game/AI Engine и остальных потребителей контейнера.
+- [x] Несжимаемые слоты иконок, естественные ширины вкладок с горизонтальной прокруткой.
+- [x] Rust-иконка Home; название пресета вместе с моделью и отдельный аватар/акцентная шестерёнка в Sandbox.
+- [x] Физический захват FIFINE K670 проверен без сохранения звука.
+
+Исходники Qt, цвета, связи и ограничения: [аудит](gui/settings-layout-audio-20261105.md). Точные результаты финальных проверок — в HANDOFF.md; этот срез не означает полной готовности установщика речевых моделей и остальных Core-настроек.
+
+### GUI и локализация, 2026-11-03
+
+- [x] Отдельная Slint-оболочка, Home и страницы-заглушки, layout-контейнеры и макет меню лаунчера.
+- [x] Общий Rust-модуль i18n(ID, source), сохранение описаний сообщений вместо готовых переводов.
+- [x] Импорт 15 исходных JSON-каталогов и русского исходного языка; contextual ID overrides.
+- [x] Извлечение деклараций, проверка конфликтов и параметров, экспорт шаблона переводчику.
+- [x] Смена языка и revision переводят существующие Slint bindings без пересоздания компонента.
+- [x] Явный внешний каталог, добавление языков, атомарный reload и сохранение рабочего состояния при ошибке.
+- [x] Общие тесты с GUI: 243 passed, 2 ignored; Clippy/fmt, offline debug build.
+- [ ] Сохранение всех LocaleId через core settings и подключение настоящего SettingsPresenter к GUI.
+- [ ] Plural forms и локальное форматирование чисел/дат.
+
+Детали: [localization](localization.md), [GUI](gui.md).
+
 - [x] Статический ChatApi, явная инициализация, отсутствие ожидания LLM под lock приёма.
 - [x] Ограниченные очереди персонажей и конкурентная генерация разных персонажей.
 - [x] RequestId, RequestHandle, активный RequestRegistry, удаление terminal записей.
@@ -23,6 +50,8 @@
 - [x] Озвучка как порт: GeneratingVoice, результат аудио, ошибка с рабочим текстом, отмена до эффектов.
 - [x] Полезный частичный результат при internal error и диагностическая история сборки запроса.
 - [x] Типизированные настройки разделов, validation, revision/conflict, наблюдение.
+- [x] Общий Migration trait, единая Rust-миграция startup/import, SettingsTransfer, live import/export с CAS и offline CLI; Python stub без переноса. [Контракт](settings-migrations.md).
+- [x] Общий MigrationService со Schema/Step/Store, атомарными версиями и возобновлением; StartupMigrations и ApplicationConfig.migrations для независимых модулей до старта Core. [Контракт](migration-system.md).
 - [x] SettingsLifecycle, memory/JSON repository, отдельный исход сохранения и flush/shutdown.
 - [x] SettingsPresenter и типизированные bindable-свойства без циклов обратной записи.
 - [x] CharactersPresenter и полный контракт GuiPresenter.
@@ -47,6 +76,18 @@
 ## Правило остановки
 
 Пользователь просит при остатке примерно 8–10% 5-часового лимита зафиксировать и отправить текущее состояние и явно указать незавершённое. Инструмент счётчика найден в процессе работы; остаток контролируется. Не требуется расходовать лимит до порога, если задача уже завершена.
+
+## Launcher (#43)
+
+- [x] Типизированные config/install selections и атомарное JSON-хранение без PID/ownership.
+- [x] Статический `LauncherApi` с явными входами и отдельный owned `LauncherService`/`LauncherSession`, без нового глобального runtime.
+- [x] Безопасный explicit/known-name discovery с проверкой root, path containment, reparse point и executable signature.
+- [x] Read-only status и Windows process identity по пути и creation time; stale/foreign процессы отделены.
+- [x] Owned `std::process::Child`: start/stop/status/completion, kill только собственного handle, drop cleanup.
+- [x] Direct-argument open-location без shell; тестовая операция через recorder без Explorer.
+- [x] CLI `launcher status`/`launcher session` до Gemini initialization; standalone start/stop отклоняются.
+- [x] Реальные process integration tests: missing install, stale PID, already running, permission denied, completion, stop, drop, reopen.
+- [x] Документация, отклонения и точная матрица критериев: [rust-launcher](../docs/03-runtime/rust-launcher.md).
 
 ## Текущее состояние
 

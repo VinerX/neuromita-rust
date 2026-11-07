@@ -1,0 +1,33 @@
+import { I18n } from "../i18n.slint";
+import { Theme } from "../theme.slint";
+import { Label, ActionSurface } from "controls.slint";
+
+export component LanguageMenu inherits PopupWindow {
+    callback selected(string);
+    callback reload();
+    width: 240px;
+    height: 44px + I18n.languages.length * 25px;
+    close-policy: close-on-click-outside;
+    Rectangle {
+        width: 100%; height: 100%; background: #0e101ff5;
+        border-radius: 8px; border-width: 1px; border-color: Theme.border;
+        VerticalLayout {
+            padding: 4px; spacing: 0px;
+            for language in I18n.languages: ActionSurface {
+                height: 25px; label: language.name; selected: I18n.locale == language.code; border-radius: 4px;
+                HorizontalLayout {
+                    padding-left: 12px; padding-right: 12px; spacing: 8px;
+                    Label { text: language.name; min-width: 0px; }
+                    Label { width: 45px; text: language.code; color: Theme.muted; horizontal-alignment: right; }
+                }
+                activated => { root.close(); root.selected(language.code); }
+            }
+            Rectangle { height: 5px; }
+            ActionSurface {
+                height: 30px; label: I18n.i18n("localization.reload", "Перечитать переводы"); border-radius: 4px;
+                Label { text: parent.label; horizontal-alignment: center; }
+                activated => { root.close(); root.reload(); }
+            }
+        }
+    }
+}

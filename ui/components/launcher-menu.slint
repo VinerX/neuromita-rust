@@ -1,0 +1,55 @@
+import { Theme } from "../theme.slint";
+import { Label, ActionSurface } from "controls.slint";
+import { I18n } from "../i18n.slint";
+
+export enum LauncherMenuAction {
+    check-updates,
+    install-unity,
+    verify-unity,
+    open-unity-folder,
+    update-settings,
+}
+
+export component LauncherMenu inherits PopupWindow {
+    callback chosen(LauncherMenuAction);
+    width: 300px;
+    height: 167px;
+    close-policy: close-on-click-outside;
+    Rectangle {
+        width: 100%; height: 100%;
+        background: #0e101ff5;
+        border-width: 1px; border-color: #282636d9; border-radius: 8px;
+        VerticalLayout {
+            padding: 4px; spacing: 0px;
+            for item[index] in [
+                { action: LauncherMenuAction.check-updates, label: I18n.i18n("launcher.actions.check-updates", "Проверить обновления") },
+                { action: LauncherMenuAction.install-unity, label: I18n.i18n("launcher.actions.install", "Установить / обновить Unity") },
+                { action: LauncherMenuAction.verify-unity, label: I18n.i18n("launcher.actions.verify", "Проверить файлы Unity") },
+                { action: LauncherMenuAction.open-unity-folder, label: I18n.i18n("launcher.actions.open-folder", "Открыть папку Unity") },
+                { action: LauncherMenuAction.update-settings, label: I18n.i18n("launcher.actions.update-settings", "Настройки обновлений") }
+            ]: VerticalLayout {
+                padding: 0px; spacing: 0px;
+                if index == 3: Rectangle {
+                    height: 9px;
+                    HorizontalLayout {
+                        padding-left: 8px; padding-right: 8px;
+                        VerticalLayout {
+                            padding: 0px; alignment: center;
+                            Rectangle { height: 1px; background: #ffffff12; }
+                        }
+                    }
+                }
+                ActionSurface {
+                    height: 30px; label: item.label; border-radius: 4px;
+                    border-width: 0px;
+                    background: self.hovered || self.has-focus ? #b74b7d1f : transparent;
+                    HorizontalLayout {
+                        padding-left: 20px; padding-right: 20px;
+                        Label { text: item.label; font-size: 12px; min-width: 0px; }
+                    }
+                    activated => { root.close(); root.chosen(item.action); }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,1 @@
+{"id":"local_transformers_embedding","name":"Local Transformers Embedding","version":"0.1.0","kind":"embedding","entrypoint":"plugin.py","api_version":1}

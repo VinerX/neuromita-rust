@@ -1,243 +1,230 @@
 use std::{fmt, sync::Arc};
 
+use serde::Serialize;
 use thiserror::Error;
 use uuid::Uuid;
 
 use crate::{
-    character::CharacterId,
-    generation::{GenerationError, GenerationPreset},
-    timeline::{ContextAnchor, ContextPosition, EventId},
-    voice::{AudioArtifact, VoiceError, VoicePlan},
+    character::{AcceptedResponse, CharacterId},
+    finetune::SampleId,
+    game_context::GameRuntimeContext,
+    generation::GenerationError,
+    identity::RequestId,
+    interaction::TurnIntent,
+    timeline::{ContextPosition, EventId, conversation::ConversationAudience},
+    voice::VoiceError,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct RequestId(pub Uuid);
-
-impl RequestId {
-    pub(crate) fn new() -> Self {
-        Self(Uuid::new_v4())
-    }
-}
-impl fmt::Display for RequestId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum RequestSource {
     Presenter,
+    Scheduler,
     Client(Uuid),
-}
-
-#[derive(Debug, Error)]
-pub enum InputError {
-    #[error("message must not be empty")]
-    Empty,
-    #[error("message exceeds 64 KiB")]
-    TooLarge,
-}
-
-#[derive(Debug, Clone)]
-pub struct UserInput {
-    event_id: EventId,
-    text: Arc<str>,
-}
-
-impl UserInput {
-    pub fn new(text: String) -> Result<Self, InputError> {
-        if text.trim().is_empty() {
-            return Err(InputError::Empty);
-        }
-        if text.len() > 64 * 1024 {
-            return Err(InputError::TooLarge);
-        }
-        Ok(Self {
-            event_id: EventId::new(),
-            text: Arc::from(text),
-        })
-    }
-    pub fn event_id(&self) -> EventId {
-        self.event_id
-    }
-    pub fn text(&self) -> &Arc<str> {
-        &self.text
-    }
-}
-
-pub trait Message: Send + Sync + fmt::Debug {
-    fn character_id(&self) -> CharacterId;
-    fn preset(&self) -> &GenerationPreset;
-    fn input(&self) -> &UserInput;
-    fn source(&self) -> RequestSource;
-    fn intent(&self) -> TurnIntent;
-    fn voice(&self) -> &VoicePlan;
-    fn at(&self) -> ContextPosition;
+    Game(Uuid),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TurnIntent {
-    Reply,
-    React(EventId),
-    Initiate,
+pub enum CancelReason {
+    User,
+    Shutdown,
+    SelectionChanged,
+    ContextChanged,
+    QueueDrain,
+}
+
+pub trait GenerationCommand: Send + Sync + fmt::Debug {
+    fn character_id(&self) -> CharacterId;
+    fn guidance(&self) -> &str;
+    fn source(&self) -> RequestSource;
+    fn intent(&self) -> TurnIntent;
+    fn at(&self) -> ContextPosition;
+    fn audience(&self) -> &ConversationAudience;
+    fn game_context(&self) -> Option<&GameRuntimeContext> {
+        None
+    }
 }
 
 #[derive(Debug)]
 pub struct ReplyRequest {
     character_id: CharacterId,
-    preset: GenerationPreset,
-    input: UserInput,
+    message: EventId,
     source: RequestSource,
-    voice: VoicePlan,
     at: ContextPosition,
+    audience: ConversationAudience,
+    game_context: Option<Arc<GameRuntimeContext>>,
 }
 
 impl ReplyRequest {
-    pub fn new(
-        character_id: CharacterId,
-        preset: GenerationPreset,
-        input: UserInput,
-        source: RequestSource,
-    ) -> Self {
+    pub fn new(character_id: CharacterId, message: EventId, source: RequestSource) -> Self {
         Self {
             character_id,
-            preset,
-            input,
+            message,
             source,
-            voice: VoicePlan::Disabled,
             at: ContextPosition::Latest,
+            audience: ConversationAudience::private_to(character_id),
+            game_context: None,
         }
-    }
-    pub fn with_voice(mut self, voice: VoicePlan) -> Self {
-        self.voice = voice;
-        self
     }
     pub fn at(mut self, at: ContextPosition) -> Self {
         self.at = at;
         self
     }
+    pub fn with_audience(mut self, audience: ConversationAudience) -> Self {
+        self.audience = audience;
+        self
+    }
+    pub fn with_game_context(mut self, context: Arc<GameRuntimeContext>) -> Self {
+        self.game_context = Some(context);
+        self
+    }
 }
 
-impl Message for ReplyRequest {
+impl GenerationCommand for ReplyRequest {
     fn character_id(&self) -> CharacterId {
         self.character_id
     }
-    fn preset(&self) -> &GenerationPreset {
-        &self.preset
-    }
-    fn input(&self) -> &UserInput {
-        &self.input
+    fn guidance(&self) -> &str {
+        ""
     }
     fn source(&self) -> RequestSource {
         self.source
     }
     fn intent(&self) -> TurnIntent {
-        TurnIntent::Reply
-    }
-    fn voice(&self) -> &VoicePlan {
-        &self.voice
+        TurnIntent::Reply(self.message)
     }
     fn at(&self) -> ContextPosition {
         self.at
+    }
+    fn audience(&self) -> &ConversationAudience {
+        &self.audience
+    }
+    fn game_context(&self) -> Option<&GameRuntimeContext> {
+        self.game_context.as_deref()
     }
 }
 
 #[derive(Debug)]
 pub struct ReactRequest {
-    message: ReplyRequest,
+    character_id: CharacterId,
     event: EventId,
+    guidance: Arc<str>,
+    source: RequestSource,
+    at: ContextPosition,
+    audience: ConversationAudience,
+    game_context: Option<Arc<GameRuntimeContext>>,
 }
 impl ReactRequest {
     pub fn new(
         character: CharacterId,
-        preset: GenerationPreset,
         event: EventId,
-        instruction: UserInput,
+        instruction: impl Into<Arc<str>>,
         source: RequestSource,
     ) -> Self {
         Self {
-            message: ReplyRequest::new(character, preset, instruction, source),
+            character_id: character,
             event,
+            guidance: instruction.into(),
+            source,
+            at: ContextPosition::Latest,
+            audience: ConversationAudience::private_to(character),
+            game_context: None,
         }
     }
-    pub fn with_voice(mut self, voice: VoicePlan) -> Self {
-        self.message = self.message.with_voice(voice);
+    pub fn at(mut self, at: ContextPosition) -> Self {
+        self.at = at;
         self
     }
-    pub fn at(mut self, at: ContextPosition) -> Self {
-        self.message = self.message.at(at);
+    pub fn with_audience(mut self, audience: ConversationAudience) -> Self {
+        self.audience = audience;
+        self
+    }
+    pub fn with_game_context(mut self, context: Arc<GameRuntimeContext>) -> Self {
+        self.game_context = Some(context);
         self
     }
 }
-impl Message for ReactRequest {
+impl GenerationCommand for ReactRequest {
     fn character_id(&self) -> CharacterId {
-        self.message.character_id()
+        self.character_id
     }
-    fn preset(&self) -> &GenerationPreset {
-        self.message.preset()
-    }
-    fn input(&self) -> &UserInput {
-        self.message.input()
+    fn guidance(&self) -> &str {
+        &self.guidance
     }
     fn source(&self) -> RequestSource {
-        self.message.source()
+        self.source
     }
     fn intent(&self) -> TurnIntent {
         TurnIntent::React(self.event)
     }
-    fn voice(&self) -> &VoicePlan {
-        self.message.voice()
-    }
     fn at(&self) -> ContextPosition {
-        Message::at(&self.message)
+        self.at
+    }
+    fn audience(&self) -> &ConversationAudience {
+        &self.audience
+    }
+    fn game_context(&self) -> Option<&GameRuntimeContext> {
+        self.game_context.as_deref()
     }
 }
 
 #[derive(Debug)]
 pub struct InitiateRequest {
-    message: ReplyRequest,
+    character_id: CharacterId,
+    guidance: Arc<str>,
+    source: RequestSource,
+    at: ContextPosition,
+    audience: ConversationAudience,
+    game_context: Option<Arc<GameRuntimeContext>>,
 }
 impl InitiateRequest {
     pub fn new(
         character: CharacterId,
-        preset: GenerationPreset,
-        instruction: UserInput,
+        instruction: impl Into<Arc<str>>,
         source: RequestSource,
     ) -> Self {
         Self {
-            message: ReplyRequest::new(character, preset, instruction, source),
+            character_id: character,
+            guidance: instruction.into(),
+            source,
+            at: ContextPosition::Latest,
+            audience: ConversationAudience::private_to(character),
+            game_context: None,
         }
     }
-    pub fn with_voice(mut self, voice: VoicePlan) -> Self {
-        self.message = self.message.with_voice(voice);
+    pub fn at(mut self, at: ContextPosition) -> Self {
+        self.at = at;
         self
     }
-    pub fn at(mut self, at: ContextPosition) -> Self {
-        self.message = self.message.at(at);
+    pub fn with_audience(mut self, audience: ConversationAudience) -> Self {
+        self.audience = audience;
+        self
+    }
+    pub fn with_game_context(mut self, context: Arc<GameRuntimeContext>) -> Self {
+        self.game_context = Some(context);
         self
     }
 }
-impl Message for InitiateRequest {
+impl GenerationCommand for InitiateRequest {
     fn character_id(&self) -> CharacterId {
-        self.message.character_id()
+        self.character_id
     }
-    fn preset(&self) -> &GenerationPreset {
-        self.message.preset()
-    }
-    fn input(&self) -> &UserInput {
-        self.message.input()
+    fn guidance(&self) -> &str {
+        &self.guidance
     }
     fn source(&self) -> RequestSource {
-        self.message.source()
+        self.source
     }
     fn intent(&self) -> TurnIntent {
         TurnIntent::Initiate
     }
-    fn voice(&self) -> &VoicePlan {
-        self.message.voice()
-    }
     fn at(&self) -> ContextPosition {
-        Message::at(&self.message)
+        self.at
+    }
+    fn audience(&self) -> &ConversationAudience {
+        &self.audience
+    }
+    fn game_context(&self) -> Option<&GameRuntimeContext> {
+        self.game_context.as_deref()
     }
 }
 
@@ -247,14 +234,6 @@ pub struct RequestMetadata {
     pub character_id: CharacterId,
     pub source: RequestSource,
     pub intent: TurnIntent,
-}
-
-#[derive(Debug, Clone)]
-pub struct AcceptedResponse {
-    pub text: Arc<str>,
-    pub event_id: EventId,
-    pub context: ContextAnchor,
-    pub audio: Option<AudioArtifact>,
 }
 
 #[derive(Debug, Clone)]
@@ -290,7 +269,9 @@ impl From<Arc<str>> for InternalFailure {
 #[derive(Debug, Clone)]
 pub enum ProcessingStage {
     GeneratingText,
+    TextReady { text: Arc<str> },
     GeneratingVoice { text: Arc<str> },
+    Accepting { text: Arc<str> },
 }
 
 #[derive(Debug, Clone)]
@@ -299,6 +280,12 @@ pub enum RequestState {
     Processing(ProcessingStage),
     Finished(RequestOutcome),
     Cancelled,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct DatasetCapture {
+    pub sample_id: Option<SampleId>,
+    pub warning: Option<Arc<str>>,
 }
 
 impl RequestState {
@@ -312,9 +299,36 @@ pub struct RequestSnapshot {
     pub metadata: RequestMetadata,
     pub revision: u64,
     pub state: RequestState,
+    pub dataset: DatasetCapture,
+    pub cancel_reason: Option<CancelReason>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+impl RequestSnapshot {
+    pub fn provisional_text(&self) -> Option<&str> {
+        match &self.state {
+            RequestState::Processing(
+                ProcessingStage::TextReady { text }
+                | ProcessingStage::GeneratingVoice { text }
+                | ProcessingStage::Accepting { text },
+            ) => Some(text),
+            _ => None,
+        }
+    }
+
+    pub fn can_cancel(&self) -> bool {
+        matches!(
+            self.state,
+            RequestState::Pending
+                | RequestState::Processing(
+                    ProcessingStage::GeneratingText
+                        | ProcessingStage::TextReady { .. }
+                        | ProcessingStage::GeneratingVoice { .. }
+                )
+        )
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum EffectPhase {
     Working,
     Accepting,
@@ -342,6 +356,10 @@ pub enum SubmitError {
     QueueClosed,
     #[error("character is unavailable")]
     CharacterUnavailable,
+    #[error("timeline could not accept the request input")]
+    TimelineUnavailable,
+    #[error("target event is not observable or not a message when replying")]
+    InvalidTargetEvent,
 }
 
 #[derive(Debug, Error)]

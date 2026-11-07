@@ -1,0 +1,98 @@
+export struct PromptSetItem { character: int, name: string, author: string, version: string, description: string }
+
+export struct CharacterPresets { reply: string, react: string, initiate: string, split: bool }
+
+export struct PresetItem { key-error: string, output-token-wire-key: string, template-id: string, id: string, name: string, model: string, provider: string, endpoint: string, key-env: string, temperature: string, tokens: string, timeout: string, configured: bool, temperature-enabled: bool, tokens-enabled: bool }
+export struct PresetTemplateItem { id: string, name: string, icon: string, format: string, endpoint: string, documentation: string, pricing: string, badge-kind: string, available: bool }
+export struct PresetParameterItem { id: string, wire-key: string, title: string, title-key: string, description: string, description-key: string, editable: bool, sent: bool }
+export global SettingsUi {
+    in-out property <[bool]> section-visible: [true, true, true, true, true, true, true, true, true, true, true, true];
+    in-out property <bool> hide-private: true;
+    callback section-visibility(int, bool);
+    callback set-hide-private(bool);
+    in-out property <int> section;
+    in-out property <[PresetItem]> settings-presets;
+    in-out property <[PresetTemplateItem]> preset-templates;
+    in-out property <[PresetParameterItem]> preset-parameters;
+    in-out property <string> preset-search;
+    in-out property <int> preset-tab;
+    in-out property <bool> preset-creating;
+    in-out property <string> preset-template-id;
+    in-out property <string> preset-template-name;
+    in-out property <string> preset-provider-icon;
+    in-out property <string> preset-schema-label;
+    in-out property <string> preset-delete-id;
+    in-out property <bool> preset-reserve-keys-open;
+    in-out property <bool> preset-reserve-providers-open;
+    in-out property <string> settings-error;
+    in-out property <string> settings-revision;
+    in-out property <int> settings-persistence;
+    in-out property <string> settings-active;
+    in-out property <int> settings-volume;
+    in-out property <bool> settings-voice-launcher;
+    in-out property <bool> settings-voice-game;
+    in-out property <string> settings-voice-name;
+    in-out property <[CharacterPresets]> character-presets;
+    in-out property <[PromptSetItem]> prompt-set-options;
+    in-out property <[string]> character-prompt-sets;
+    in-out property <int> selected-character;
+    in-out property <bool> character-prompt-expanded: true;
+    in-out property <string> preset-edit-id;
+    in-out property <bool> preset-configured;
+    in-out property <string> preset-pending-id;
+    in-out property <bool> preset-pending-save;
+    in-out property <string> preset-baseline-name;
+    in-out property <string> preset-baseline-model;
+    in-out property <string> preset-baseline-endpoint;
+    in-out property <string> preset-baseline-key-env;
+    in-out property <string> preset-baseline-template;
+    in-out property <string> preset-baseline-temperature;
+    in-out property <string> preset-baseline-tokens;
+    in-out property <string> preset-baseline-timeout;
+    out property <bool> preset-dirty: preset-edit-id != "" && (
+        preset-name != preset-baseline-name || preset-model != preset-baseline-model ||
+        preset-endpoint != preset-baseline-endpoint || preset-key-env != preset-baseline-key-env ||
+        preset-temperature-enabled != preset-baseline-temperature-enabled || preset-tokens-enabled != preset-baseline-tokens-enabled ||
+        preset-template-id != preset-baseline-template || preset-temperature != preset-baseline-temperature ||
+        preset-tokens != preset-baseline-tokens || preset-timeout != preset-baseline-timeout
+    );
+    in-out property <string> preset-name;
+    in-out property <string> preset-model;
+    in-out property <string> preset-endpoint;
+    in-out property <string> preset-url-template;
+    out property <string> preset-request-url: preset-url-template == "" ? preset-endpoint :
+        (preset-model == "" ? "" : preset-url-template.replace-all("{model}", preset-model));
+    in-out property <bool> preset-key-revealed;
+    in-out property <string> preset-key-env;
+    in-out property <bool> preset-temperature-enabled;
+    in-out property <bool> preset-tokens-enabled;
+    in-out property <bool> preset-baseline-temperature-enabled;
+    in-out property <bool> preset-baseline-tokens-enabled;
+    in-out property <string> preset-output-token-wire-key;
+    in-out property <string> preset-temperature;
+    in-out property <string> preset-tokens;
+    in-out property <string> preset-timeout;
+    public pure function matches-preset(item: PresetItem, query: string) -> bool {
+        return query == "" || item.name.to-lowercase().replace-all(query.to-lowercase(), "") != item.name.to-lowercase() || item.model.to-lowercase().replace-all(query.to-lowercase(), "") != item.model.to-lowercase();
+    }
+    callback preset-new();
+    callback preset-confirm-save();
+    callback preset-confirm-discard();
+    callback preset-confirm-cancel();
+    callback preset-template-select(string);
+    callback preset-documentation();
+    callback preset-help(int);
+    callback preset-save();
+    callback preset-edit(string);
+    callback preset-delete(string);
+    callback preset-activate(string);
+    callback character-prompt-set(int, string);
+    callback prompt-reload();
+    callback prompt-open-folder(int);
+    callback character-preset(int, int, string);
+    callback character-common(int, string);
+    callback voice-launcher(bool);
+    callback voice-game(bool);
+    callback voice-name(string);
+    callback volume(int);
+}

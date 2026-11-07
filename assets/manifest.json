@@ -1,0 +1,511 @@
+{
+  "schema_version": 1,
+  "imported_on": "2026-11-03",
+  "source_repository": "https://github.com/Atm4x/NeuroMita",
+  "source_commit": "7f6b2625d355b1e4e22ed078283df9cfac2468ca",
+  "assets": [
+    {
+      "path": "assets/avatars/.gitkeep",
+      "source_path": "assets/avatars/.gitkeep",
+      "source_git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "assets/avatars/cappie.png",
+      "source_path": "assets/avatars/cappie.png",
+      "source_git_blob": "077152e5acea6864c2599cc519324ec3705c5e4d",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 333990,
+      "sha256": "d4ffe1c29e9fe7b875f0f06afa4804509ba5a984dcbd2be8e9a8f17c62bba9c9"
+    },
+    {
+      "path": "assets/avatars/crazy.png",
+      "source_path": "assets/avatars/crazy.png",
+      "source_git_blob": "b80d3835a283c992c30603ae49054df86893f083",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 176642,
+      "sha256": "0343b7f814dca46b85877c99626060beaedba101ce19a4a31e76c0f36ba590f4"
+    },
+    {
+      "path": "assets/avatars/ghost.png",
+      "source_path": "assets/avatars/ghost.png",
+      "source_git_blob": "4f335dd6e87b04b986e88dbc07c6f53ccd040120",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 231747,
+      "sha256": "3cbdd4d6839b07df21c67ddfa0727f5633f750d372f6006ee2c8b154b0439287"
+    },
+    {
+      "path": "assets/avatars/kind.png",
+      "source_path": "assets/avatars/kind.png",
+      "source_git_blob": "da7386e3ba0e425d34087b2eb5cf2c474c68e332",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 124305,
+      "sha256": "6e87348ba615196263fcd8c0b07c6790e2ba7d23510acaf9339de1313badbad6"
+    },
+    {
+      "path": "assets/avatars/mila.png",
+      "source_path": "assets/avatars/mila.png",
+      "source_git_blob": "1fc67a927be8ccc0d9aa3671205d2f9869240c00",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 141639,
+      "sha256": "6e3abc1d855e9c68b69af19fb37d6f82044cad411c40056af8d48bfe89b20526"
+    },
+    {
+      "path": "assets/avatars/shorthair.png",
+      "source_path": "assets/avatars/shorthair.png",
+      "source_git_blob": "a0ce2e2b28313d767f1681ac2a08932de0ec2f69",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 255932,
+      "sha256": "2b0f7fd8c709e3b41a36ed6301a4332a9ce9708a869d9b4c51f1f5ce1b734496"
+    },
+    {
+      "path": "assets/avatars/sleepy.png",
+      "source_path": "assets/avatars/sleepy.png",
+      "source_git_blob": "e2354adf14080f93f3a841ed213118789941fab9",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 209111,
+      "sha256": "cb79ecabbd06177ad48395dc56423fcdc84a7ddca3335f241deecd2379b0ffa1"
+    },
+    {
+      "path": "assets/finetune_motivation.png",
+      "source_path": "assets/finetune_motivation.png",
+      "source_git_blob": "e24e7f38f6a7dbcd3248d71631fda6aeb7f4ece9",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 329881,
+      "sha256": "fe584fbdf76d76c4b2fbc59fa0f020fda1379b76f41e9c146c06793cb51f0996"
+    },
+    {
+      "path": "assets/finetune_motivation_100.png",
+      "source_path": "assets/finetune_motivation_100.png",
+      "source_git_blob": "1f19836183a7c34e6c95c880d16d9ab13578170b",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 315498,
+      "sha256": "93899f23cdddb6f4532eea344f22cff25222dd82dacd44d33bff0cb7450abf68"
+    },
+    {
+      "path": "assets/guide/guide_memory.png",
+      "source_path": "assets/guide/guide_memory.png",
+      "source_git_blob": "3838b2fc6e030afa7b9b7786cb2f1d178c7e4950",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 141644,
+      "sha256": "5e6edc556a8c1d5260ab6bcbc3f4a70b38daf6d13decfbb0524820deda827721"
+    },
+    {
+      "path": "assets/guide/guide_memory1.png",
+      "source_path": "assets/guide/guide_memory1.png",
+      "source_git_blob": "4a339e1a29745b7da9430bbef51db167851c0976",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 131800,
+      "sha256": "6e97620efe53a6c27f667935a85355058cd8ff0c9931d6c8d48bbe5ac94c4663"
+    },
+    {
+      "path": "assets/guide/guide_microphone.png",
+      "source_path": "assets/guide/guide_microphone.png",
+      "source_git_blob": "9abb3022e593d7ccacaf0ea43004f208eb9e7fb9",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 118848,
+      "sha256": "3c288b28249ec43fc0ec67defeef4ef8db77b9c0bcbacafccac66523f1432d8d"
+    },
+    {
+      "path": "assets/guide/guide_microphone1.png",
+      "source_path": "assets/guide/guide_microphone1.png",
+      "source_git_blob": "a3f678157d0894c511082f9449d36a3173586549",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 113497,
+      "sha256": "68603e4e2b6bc7209a40526e831df2bc900276fe595cbb252c27e8562b86a6c8"
+    },
+    {
+      "path": "assets/guide/guide_models.png",
+      "source_path": "assets/guide/guide_models.png",
+      "source_git_blob": "59c338ea98ff3a9ed1c9162be403c6f20a879914",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 145029,
+      "sha256": "3f92cc9bc0bf640683d135ff43a03f3d52e66423cbcf4b8a56ac91fd9e5f3943"
+    },
+    {
+      "path": "assets/guide/guide_models1.png",
+      "source_path": "assets/guide/guide_models1.png",
+      "source_git_blob": "5ab6d9900647a9d94155883e655a4b5675c50671",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 200067,
+      "sha256": "8efebe9c384907ca1523250e554d8b0c8a4c974e449911401b0a6d8db54cbd93"
+    },
+    {
+      "path": "assets/guide/guide_next.png",
+      "source_path": "assets/guide/guide_next.png",
+      "source_git_blob": "10ddb2d70bf69d2020c7fae87fe4e6bd81fd229c",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 136004,
+      "sha256": "941e0436decc20cce9b9304cebeb0440f30f9a5040fa7e07cb017f56f2f5cf1c"
+    },
+    {
+      "path": "assets/guide/guide_next1.png",
+      "source_path": "assets/guide/guide_next1.png",
+      "source_git_blob": "0bc831c50c88f93723e8c6ff48f07329b551427b",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 130015,
+      "sha256": "76144d2833318d5a8938f840b87fa9778832660f7d7af0e80e7cf0ccdb821b23"
+    },
+    {
+      "path": "assets/guide/guide_preset.png",
+      "source_path": "assets/guide/guide_preset.png",
+      "source_git_blob": "2ece50d25e744436225e42c1a4d0babe2c336d86",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 79594,
+      "sha256": "1a8be98de659052d04a03118d3601025ea4077158e558ab93aad779d5c80178d"
+    },
+    {
+      "path": "assets/guide/guide_preset1.png",
+      "source_path": "assets/guide/guide_preset1.png",
+      "source_git_blob": "f7240fb88223411fa198a0b5db6d91e24f496c3d",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 75313,
+      "sha256": "304963ea29016a0e7c58ad66ad4b7e9c877516ee8b842b3ee8182c4c8eefc7ba"
+    },
+    {
+      "path": "assets/guide/guide_sandbox.png",
+      "source_path": "assets/guide/guide_sandbox.png",
+      "source_git_blob": "64db8db56e72340ed59f8ff1b464c90a4f6b100d",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 94107,
+      "sha256": "7bcc78318f03d914a633b89d0d3736fcb2d39fd2bd2359131e9ead81a6ac25f4"
+    },
+    {
+      "path": "assets/guide/guide_sandbox1.png",
+      "source_path": "assets/guide/guide_sandbox1.png",
+      "source_git_blob": "11274278b8587fdf32ee581e7a000f755530da7e",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 88143,
+      "sha256": "31385ca524fedbc8e6e967fef35c29496942c89e562cf8566d72a9f9996f8881"
+    },
+    {
+      "path": "assets/guide/guide_screen.png",
+      "source_path": "assets/guide/guide_screen.png",
+      "source_git_blob": "0ce512293e7806fdeff6ac798a8e3915a6a640a5",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 267987,
+      "sha256": "b4ad9516d8ee5f76fc5eeb064a6cd6c11527dc34ef6bbba394786f2c75f6be26"
+    },
+    {
+      "path": "assets/guide/guide_screen1.png",
+      "source_path": "assets/guide/guide_screen1.png",
+      "source_git_blob": "220298e78bde9c1213031cd92de73a37ab10a4eb",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 308579,
+      "sha256": "bae341e398b84339a8a6b878d4e606cee19608878ea3bd27190688121a962b37"
+    },
+    {
+      "path": "assets/guide/guide_voice.png",
+      "source_path": "assets/guide/guide_voice.png",
+      "source_git_blob": "77fa0bfa1783f2273159391eb80a41d5d87610ae",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 176137,
+      "sha256": "de44d59260737c7206481578f474322a3b6b95c9d3d6a2ffe539b509d3a09b6d"
+    },
+    {
+      "path": "assets/guide/guide_voice1.png",
+      "source_path": "assets/guide/guide_voice1.png",
+      "source_git_blob": "f1b273a59a7941264949e285110570a2c13aa102",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 168440,
+      "sha256": "b7132f0d985f88e9547f83ab525a4be008ef4ea4a120fac98250c3423a23c7ef"
+    },
+    {
+      "path": "assets/guide/guide_welcome.png",
+      "source_path": "assets/guide/guide_welcome.png",
+      "source_git_blob": "4090dccdf7665d4a005ba7552676612a7fd102df",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 1560932,
+      "sha256": "0a15304cc79caa672e388851ad55a671ca772f75b8ac014b817131e135b6506f"
+    },
+    {
+      "path": "assets/guide/guide_welcome1.png",
+      "source_path": "assets/guide/guide_welcome1.png",
+      "source_git_blob": "963b74a61076ad1757a73ee1146bec7e1bfed6b9",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 1561864,
+      "sha256": "d19b89551d67bce0fa2d61ff7a004104697053fec5dcbde1749dfd4aa98d622f"
+    },
+    {
+      "path": "assets/launcher_ui/bg.jpg",
+      "source_path": "assets/launcher_ui/bg.jpg",
+      "source_git_blob": "5730f9acffc9719a610995f1c5a4cce804c5365a",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 104952,
+      "sha256": "ebf92a86caa0556fdc7088bf1d86307845f88aeb89d3ee05ffe7834d7b244960"
+    },
+    {
+      "path": "assets/launcher_ui/bg_old.jpg",
+      "source_path": "assets/launcher_ui/bg_old.jpg",
+      "source_git_blob": "b19b1b6db4a255a5f3fcd8a35a17854a146c8272",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 2642068,
+      "sha256": "b843c7ca8dd42117a5a175d3e32785436e4c5068d92ec24967de07a7447a877f"
+    },
+    {
+      "path": "assets/launcher_ui/check.svg",
+      "source_path": "assets/launcher_ui/check.svg",
+      "source_git_blob": "8fa5cc015cd2d3cdbd2935937508141a34227766",
+      "source_checkout_matches_blob": false,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 226,
+      "sha256": "2938864b81747e53fcc88bb399af0539f9124f2d36c2d1ca7ff3a8bc645c991c"
+    },
+    {
+      "path": "assets/launcher_ui/icon.ico",
+      "source_path": "assets/launcher_ui/icon.ico",
+      "source_git_blob": "531676175063c1bfa56f948df169a3a02348b258",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 183159,
+      "sha256": "441d088e88cf6dce7dda562b45ac59a02418a7f0da7493382a7b96071314e8fd"
+    },
+    {
+      "path": "assets/launcher_ui/icon.png",
+      "source_path": "assets/launcher_ui/icon.png",
+      "source_git_blob": "e772f707a305c660c0bfd394b4153e5c2ecf7287",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 134979,
+      "sha256": "1d3255fdb9bb3df3ab750db5468cd49ab26662709168f4a5d755892e7b5721d8"
+    },
+    {
+      "path": "assets/launcher_ui/logo.png",
+      "source_path": "assets/launcher_ui/logo.png",
+      "source_git_blob": "52777d99b88f2332c663b111dfbcba597a78c8a7",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 662924,
+      "sha256": "34e35e5c4c9d8d146e716fe5fb8e23340478d43eb05d0678c67f7fc564211182"
+    },
+    {
+      "path": "assets/launcher_ui/NM_Logo.ico",
+      "source_path": "assets/launcher_ui/NM_Logo.ico",
+      "source_git_blob": "7ba01f337337e12b62a550afcb02df7f94d7a3bd",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 117357,
+      "sha256": "0727067bce43764e22016f12eaf78013622fd84d7ede9815ba4633e2591d1e79"
+    },
+    {
+      "path": "assets/launcher_ui/NM_Logo.png",
+      "source_path": "assets/launcher_ui/NM_Logo.png",
+      "source_git_blob": "b337134ebf42e320ae3f3f80744d0aac43652f85",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 75582,
+      "sha256": "ea85f5d696245c55296daeaafebc6732534c069ebe2ec5a18793f67fe7d73f14"
+    },
+    {
+      "path": "assets/icons/controls/chevron-up.svg",
+      "source_path": "src/ui/icons/controls/chevron-up.svg",
+      "source_git_blob": "893008f8ffb7ea6d11bfb096e5e5e637a6f35ca2",
+      "source_checkout_matches_blob": false,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 229,
+      "sha256": "b645d07e4d0fc91ecdcd3c4ae4d07929fc1e721efbaf784a250be9dbda89d982"
+    },
+    {
+      "path": "assets/icons/providers/aiio.svg",
+      "source_path": "src/ui/icons/providers/aiio.svg",
+      "source_git_blob": "53d3c88cfa10542f5493d04bdf581811cae6e69b",
+      "source_checkout_matches_blob": false,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 1588,
+      "sha256": "694f93483f06eedd5f7fbe019d1329714dea598ffb79b5b967ec83260b6ccfea"
+    },
+    {
+      "path": "assets/icons/providers/chutes.svg",
+      "source_path": "src/ui/icons/providers/chutes.svg",
+      "source_git_blob": "397eeac3c8e8ec5ff0b577bac54561b1340406bf",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 1244,
+      "sha256": "84a59902d17f4f95d23c5ce0e1045e37a60d219ea8c84bf45fe1710df680a8b5"
+    },
+    {
+      "path": "assets/icons/providers/google.svg",
+      "source_path": "src/ui/icons/providers/google.svg",
+      "source_git_blob": "e832e26cd97df304ba66029ac79c93b93ab155c2",
+      "source_checkout_matches_blob": false,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 720,
+      "sha256": "4df8819dbe3647f678707b9ab33bd1feb86634c8aacc7ecaf8e2f67119256a7b"
+    },
+    {
+      "path": "assets/icons/providers/groq.svg",
+      "source_path": "src/ui/icons/providers/groq.svg",
+      "source_git_blob": "7294646b9fc7ab9d4d80d18529a687bd629dc6a6",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 568,
+      "sha256": "078d5cf6e7a54905040c15ddacf5ea33c13042fe7739e820cedc2096e4406651"
+    },
+    {
+      "path": "assets/icons/providers/kodikrouter.svg",
+      "source_path": "src/ui/icons/providers/kodikrouter.svg",
+      "source_git_blob": "2490d4b15c5ab6b78b7a1dbf4c5509b5e9920c23",
+      "source_checkout_matches_blob": false,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 41993,
+      "sha256": "294fa95f942356aed188129755f73682040733bb82c016f6a3c72b7d44c43898"
+    },
+    {
+      "path": "assets/icons/providers/LICENSE-LobeHub",
+      "source_path": "src/ui/icons/providers/LICENSE-LobeHub",
+      "source_git_blob": "1dd53d2a9d99e5f91113831a850276ef530cb9d2",
+      "source_checkout_matches_blob": false,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 1085,
+      "sha256": "498923bf779fa940d533f4741f41e407af018369276dc5f0e3d9067a403eaeb4"
+    },
+    {
+      "path": "assets/icons/providers/lmstudio.svg",
+      "source_path": "src/ui/icons/providers/lmstudio.svg",
+      "source_git_blob": "ea0816b63fa01ffa3940672ed1d55f35d244533f",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 1253,
+      "sha256": "4a575e8382b52ce742ac5d21d361a7d2a08cea7c12390ee1bbb755ef7d3cc25b"
+    },
+    {
+      "path": "assets/icons/providers/mistral-color.svg",
+      "source_path": "src/ui/icons/providers/mistral-color.svg",
+      "source_git_blob": "8e03e244bf1035d2d4ea81e1c226a4c8c4ebd3c4",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 655,
+      "sha256": "722f74b289d95486b43662fe24fa883b333701296f618406cd0ed502299170b6"
+    },
+    {
+      "path": "assets/icons/providers/ollama.svg",
+      "source_path": "src/ui/icons/providers/ollama.svg",
+      "source_git_blob": "cc887e3dcfd2260c136e807a84909892dc139fc3",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 3290,
+      "sha256": "3a268218fb2e6e81fa31df70f70b51331625047794db81db21d35359428fae7a"
+    },
+    {
+      "path": "assets/icons/providers/openai.svg",
+      "source_path": "src/ui/icons/providers/openai.svg",
+      "source_git_blob": "78caf4fa20ffb0ae8ebefd74408871c11c1c7fd2",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 1687,
+      "sha256": "a595df6b423920c67a7f8f73c063e4bfb72d415948097b6cac063a2366bb5186"
+    },
+    {
+      "path": "assets/icons/providers/openrouter.svg",
+      "source_path": "src/ui/icons/providers/openrouter.svg",
+      "source_git_blob": "029070c8866964f3cb27851681058bd73843bef9",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 382,
+      "sha256": "ae671cc83de9bd45db97a47ed5e38a4e1bd9f93a12be495ba4b4f8b284026bca"
+    },
+    {
+      "path": "assets/icons/providers/proxyapi.svg",
+      "source_path": "src/ui/icons/providers/proxyapi.svg",
+      "source_git_blob": "bfa085d05c99d362654596f3d2e4347245660664",
+      "source_checkout_matches_blob": false,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 896,
+      "sha256": "db9abc7eb7536d1b5cb64844ab86b062d83342837899021a7bd015e7242d4f09"
+    },
+    {
+      "path": "assets/icons/providers/SOURCES.md",
+      "source_path": "src/ui/icons/providers/SOURCES.md",
+      "source_git_blob": "17c275a705be34671519f80a261b1e4bc511c4a7",
+      "source_checkout_matches_blob": false,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 829,
+      "sha256": "c9913ea316937a47e55e1458f3bf2e0c9887e166d643af3f19ef012bea3ab86c"
+    },
+    {
+      "path": "assets/icons/providers/together-color.svg",
+      "source_path": "src/ui/icons/providers/together-color.svg",
+      "source_git_blob": "8c9ec117b0f087134aefa7368a5ba5e413dc93ae",
+      "source_checkout_matches_blob": true,
+      "source_checkout_matches_blob_ignoring_crlf": true,
+      "bytes": 582,
+      "sha256": "27ccaf118a431c386b88418a34a4346afd9638dde10e3f2295db2eec1fa5898a"
+    }
+  ],
+  "user_screenshots": [
+    {
+      "path": "future/gui-reference/01-home.png",
+      "source_attachment": "codex-clipboard-ec5fdcc6-c11d-4d81-9db1-9757660f447c.png",
+      "bytes": 799353,
+      "sha256": "5f791253d637ad9381c0c300451b1e723b7b37c0afdebfaa399828b2f1422e28"
+    },
+    {
+      "path": "future/gui-reference/02-settings.png",
+      "source_attachment": "codex-clipboard-2ffd3420-c5a8-43f1-83b0-c993735e30e0.png",
+      "bytes": 100342,
+      "sha256": "9f777ec635ba811e324be5615c824c45ce043d0d3a8e576444baca6f406e3ca9"
+    },
+    {
+      "path": "future/gui-reference/03-sandbox.png",
+      "source_attachment": "codex-clipboard-53977b38-df16-47b9-afcb-ecd5486742a9.png",
+      "bytes": 159832,
+      "sha256": "9593de6483652ea9125583872da4862d278f4a0608d12f5df6896649a07a27a7"
+    },
+    {
+      "path": "future/gui-reference/04-releases.png",
+      "source_attachment": "codex-clipboard-afe2dffe-b824-4a71-9f77-8c34e8bde3e0.png",
+      "bytes": 98443,
+      "sha256": "033b0a942b4e109e69fe01ad2ce318c5fea8a9c6b9185273862f54cb66e3be3b"
+    },
+    {
+      "path": "future/gui-reference/05-gallery.png",
+      "source_attachment": "codex-clipboard-113701f8-98ab-4176-a92b-741be20998de.png",
+      "bytes": 1202081,
+      "sha256": "31419bd25c74ff24803c002af044ae034249969b1df6d71e15f974289a266776"
+    },
+    {
+      "path": "future/gui-reference/06-logs.png",
+      "source_attachment": "codex-clipboard-5fc5028e-e59d-4acc-9803-b76b0b79ee8b.png",
+      "bytes": 154387,
+      "sha256": "61de6c91734cfef17149cf793fd800fdc93e3efd800b3c54a6416df222a8f47e"
+    },
+    {
+      "path": "future/gui-reference/07-wiki.png",
+      "source_attachment": "codex-clipboard-d37035b0-b5b9-4978-9408-53ce84ad256b.png",
+      "bytes": 100934,
+      "sha256": "83fe75ea1e8ccda334d51e7657036489b4d281762434f0c80876df9c9362e26f"
+    }
+  ]
+}

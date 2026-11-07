@@ -1,0 +1,56 @@
+import { ActionSurface } from "controls.slint";
+import { Glyph } from "../sandbox/controls.slint";
+import { SettingsTheme } from "../settings/theme.slint";
+
+export component SettingsNavigationTab inherits ActionSurface {
+    in property <string> glyph;
+    in property <bool> active;
+    property <length> content-width: tab-caption.preferred-width + 54px;
+    min-width: max(54px, root.content-width);
+    preferred-width: max(54px, root.content-width);
+    height: 42px;
+    horizontal-stretch: 1;
+    vertical-stretch: 0;
+    border-width: 0px;
+    border-radius: 0px;
+    background: root.pressed ? #b74b7d24 : root.hovered ? #b74b7d14 : transparent;
+
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        padding-top: 9px;
+        padding-bottom: 9px;
+        spacing: 6px;
+
+        Rectangle {
+            width: 20px;
+            horizontal-stretch: 0;
+            height: 100%;
+            Glyph {
+                y: (parent.height - self.height) / 2;
+                width: 20px;
+                height: 18px;
+                vertical-stretch: 0;
+                text: root.glyph;
+                font-size: 14px;
+                color: root.active ? #ffffff : SettingsTheme.muted;
+            }
+        }
+        tab-caption := Text {
+            text: root.label;
+            font-family: SettingsTheme.font-family;
+            font-size: 12px;
+            font-weight: root.active ? 700 : 600;
+            color: root.active ? #ffffff : root.hovered ? SettingsTheme.text : SettingsTheme.muted;
+            width: self.preferred-width;
+            horizontal-stretch: 0;
+            vertical-alignment: center;
+        }
+    }
+    Rectangle {
+        y: parent.height - 2px;
+        width: 100%;
+        height: 2px;
+        background: root.active ? SettingsTheme.accent-alt : transparent;
+    }
+}

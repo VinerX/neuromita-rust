@@ -1,0 +1,153 @@
+import { SettingsSectionHeading, SettingsToggleRow, SettingsWideEntryRow, SettingsEntryRow, SettingsChoiceRow, SettingsText } from "../components/settings-kit.slint";
+import { CollapsibleSettingsSection, InnerSettingsSection } from "../components/collapsible-section.slint";
+import { SettingsScrollView } from "scroll-view.slint";
+import { SettingsTheme } from "theme.slint";
+import { I18n } from "../i18n.slint";
+
+export component ModelsSettingsPage inherits SettingsScrollView {
+    in-out property <bool> behavior-open;
+    in-out property <bool> reactions-open;
+    in-out property <bool> memory-open: true;
+    in-out property <bool> rag-open;
+    in-out property <bool> messages-open;
+    in-out property <bool> waiting-open;
+    in-out property <bool> tools-open;
+    in-out property <bool> working-state-open;
+    in-out property <bool> requested-actions-open;
+    in-out property <bool> hygiene-open;
+    in-out property <bool> memory-ttl-open;
+    in-out property <bool> history-ttl-open;
+    in-out property <bool> time-awareness-open;
+    in-out property <bool> compression-open;
+    in-out property <bool> rag-retrieval-open;
+    in-out property <bool> rag-embeddings-open;
+    in-out property <bool> separated-prompts: true;
+    in-out property <bool> streaming;
+    in-out property <bool> schema-reasoning;
+    in-out property <bool> react-enabled: true;
+    in-out property <bool> react-l2: true;
+    in-out property <bool> tools-enabled: true;
+    in-out property <bool> working-state;
+    in-out property <bool> action-memory;
+    in-out property <bool> deduplication: true;
+    in-out property <bool> maintenance: true;
+    in-out property <bool> memory-ttl: true;
+    in-out property <bool> history-ttl;
+    in-out property <bool> time-awareness;
+    in-out property <bool> compression;
+    in-out property <bool> rag-enabled;
+    in-out property <string> message-attempts: "3";
+    in-out property <string> attempt-delay: "0.20";
+    in-out property <string> wait-text: "40";
+    in-out property <string> wait-voice: "40";
+    in-out property <string> message-limit: "40";
+    in-out property <string> memory-limit: "75";
+    in-out property <string> rag-max-results: "10";
+    in-out property <string> working-state-limit: "2000";
+    in-out property <string> action-tail: "4";
+    in-out property <string> dedup-threshold: "0.8";
+    in-out property <string> low-priority-ttl: "15";
+    in-out property <string> normal-priority-ttl: "30";
+    in-out property <string> memory-maintenance-interval: "20";
+    content-height: content.preferred-height;
+
+    content := VerticalLayout {
+        width: root.visible-width; padding: 2px;
+        spacing: SettingsTheme.section-gap; alignment: start;
+
+        CollapsibleSettingsSection {
+            title: I18n.i18n("settings.models.request", "Поведение запросов");
+            subtitle: I18n.i18n("settings.models.request.subtitle", "Поведение запросов и работа инструментов. Параметры генерации настраиваются у API-пресета.");
+            glyph: "\u{f085}";
+            expanded <=> root.behavior-open;
+            InnerSettingsSection {
+                title: I18n.i18n("settings.models.messages", "Настройки сообщений"); expanded <=> root.messages-open;
+                SettingsToggleRow { title: I18n.i18n("settings.models.separate", "Промты раздельно"); checked: root.separated-prompts; changed(value) => { root.separated-prompts = value; } }
+                SettingsEntryRow { title: I18n.i18n("settings.models.attempts", "Кол-во попыток"); value <=> root.message-attempts; }
+                SettingsEntryRow { title: I18n.i18n("settings.models.retry-delay", "Время между попытками"); value <=> root.attempt-delay; }
+                SettingsToggleRow { title: I18n.i18n("settings.models.streaming", "Включить стриминговую передачу"); checked: root.streaming; changed(value) => { root.streaming = value; } }
+                SettingsToggleRow { title: I18n.i18n("settings.models.reasoning", "Reasoning в схеме (schema CoT)"); checked: root.schema-reasoning; changed(value) => { root.schema-reasoning = value; } }
+            }
+            InnerSettingsSection {
+                title: I18n.i18n("settings.models.waiting", "Настройки ожидания"); expanded <=> root.waiting-open;
+                SettingsEntryRow { title: I18n.i18n("settings.models.wait-text", "Время ожидания текста (сек)"); value <=> root.wait-text; }
+                SettingsEntryRow { title: I18n.i18n("settings.models.wait-audio", "Время ожидания звука (сек)"); value <=> root.wait-voice; }
+            }
+            InnerSettingsSection {
+                title: I18n.i18n("settings.models.tools", "Инструменты (Tools)"); expanded <=> root.tools-open;
+                SettingsToggleRow { title: I18n.i18n("settings.models.tools-enable", "Вызов инструментов"); checked: root.tools-enabled; changed(value) => { root.tools-enabled = value; } }
+                for tool in ["Калькулятор", "Поиск в интернете", "Google поиск", "Чтение страниц", "Поиск воспоминаний", "Напоминания"]: SettingsToggleRow { title: tool; active: false; }
+            }
+        }
+        CollapsibleSettingsSection {
+            title: I18n.i18n("settings.models.reactions", "Настройки реакций");
+            subtitle: I18n.i18n("settings.models.reactions.subtitle", "Реакции — это когда триггером генерации служит событие, а не прямой запрос пользователя.\nL2 — полноценный ответ мощной моделью.");
+            glyph: "\u{f0e7}";
+            expanded <=> root.reactions-open;
+            SettingsToggleRow { title: I18n.i18n("settings.models.react-enabled", "Использовать реакции (react)"); checked: root.react-enabled; changed(value) => { root.react-enabled = value; } }
+            SettingsToggleRow { title: I18n.i18n("settings.models.react-l2", "Использовать реакции L2 (с ответом)"); checked: root.react-l2; active: root.react-enabled; changed(value) => { root.react-l2 = value; } }
+            SettingsChoiceRow { title: I18n.i18n("settings.models.react-provider", "Провайдер для реакций L2"); value: I18n.i18n("settings.models.current", "Текущий"); options: [I18n.i18n("settings.models.current", "Текущий")]; active: false; }
+        }
+        CollapsibleSettingsSection {
+            title: I18n.i18n("settings.models.memory", "Память");
+            subtitle: I18n.i18n("settings.models.memory.subtitle", "Лимиты памяти, TTL-забывание и сжатие истории чата.");
+            glyph: "\u{f004}";
+            expanded <=> root.memory-open;
+            SettingsWideEntryRow { title: I18n.i18n("settings.models.message-limit", "Лимит сообщений"); value <=> root.message-limit; }
+            SettingsWideEntryRow { title: I18n.i18n("settings.models.memory-limit", "Лимит воспоминаний"); value <=> root.memory-limit; }
+            SettingsWideEntryRow { title: I18n.i18n("settings.models.rag-results", "Макс. результатов RAG"); value <=> root.rag-max-results; }
+            InnerSettingsSection {
+                title: I18n.i18n("settings.models.working-state", "Оперативное состояние диалога");
+                expanded <=> root.working-state-open;
+                SettingsToggleRow { title: I18n.i18n("settings.models.working-enable", "Включить оперативное состояние"); checked: root.working-state; changed(value) => { root.working-state = value; } }
+                SettingsEntryRow { title: I18n.i18n("settings.models.working-limit", "Лимит оперативного состояния (символы)"); value <=> root.working-state-limit; active: root.working-state; }
+            }
+            InnerSettingsSection {
+                title: I18n.i18n("settings.models.action-memory", "Память запрошенных действий");
+                expanded <=> root.requested-actions-open;
+                SettingsToggleRow { title: I18n.i18n("settings.models.action-enable", "Включить память действий"); checked: root.action-memory; changed(value) => { root.action-memory = value; } }
+                SettingsEntryRow { title: I18n.i18n("settings.models.action-tail", "Сохранять действий после сводки"); value <=> root.action-tail; active: root.action-memory; }
+            }
+            InnerSettingsSection {
+                title: I18n.i18n("settings.models.hygiene", "Гигиена памяти");
+                expanded <=> root.hygiene-open;
+                SettingsToggleRow { title: I18n.i18n("settings.models.dedup", "Дедуп при добавлении"); checked: root.deduplication; changed(value) => { root.deduplication = value; } }
+                SettingsEntryRow { title: I18n.i18n("settings.models.dedup-threshold", "Порог дедупа (0.5–1.0)"); value <=> root.dedup-threshold; active: root.deduplication; }
+                SettingsToggleRow { title: I18n.i18n("settings.models.maintenance", "Фоновая ревизия памяти"); checked: root.maintenance; changed(value) => { root.maintenance = value; } }
+                SettingsEntryRow { title: I18n.i18n("settings.models.maintenance-interval", "Интервал ревизии (сообщений)"); value <=> root.memory-maintenance-interval; active: root.maintenance; }
+            }
+            InnerSettingsSection {
+                title: I18n.i18n("settings.models.memory-ttl", "TTL-забывание памяти"); expanded <=> root.memory-ttl-open;
+                SettingsToggleRow { title: I18n.i18n("settings.models.memory-ttl-on", "Включить TTL-забывание"); checked: root.memory-ttl; changed(value) => { root.memory-ttl = value; } }
+                SettingsEntryRow { title: I18n.i18n("settings.models.low-days", "TTL для Low-приоритета (дней)"); value <=> root.low-priority-ttl; active: root.memory-ttl; }
+                SettingsEntryRow { title: I18n.i18n("settings.models.normal-days", "TTL для Normal-приоритета (дней)"); value <=> root.normal-priority-ttl; active: root.memory-ttl; }
+            }
+            InnerSettingsSection {
+                title: I18n.i18n("settings.models.history-ttl", "TTL-архивирование истории"); expanded <=> root.history-ttl-open;
+                SettingsToggleRow { title: I18n.i18n("settings.models.history-ttl-enable", "Включить TTL-архивирование истории"); checked: root.history-ttl; changed(value) => { root.history-ttl = value; } }
+            }
+            InnerSettingsSection {
+                title: I18n.i18n("settings.models.time", "Ощущение времени"); expanded <=> root.time-awareness-open;
+                SettingsToggleRow { title: I18n.i18n("settings.models.time-enable", "Включить временной контекст"); checked: root.time-awareness; changed(value) => { root.time-awareness = value; } }
+            }
+            InnerSettingsSection {
+                title: I18n.i18n("settings.models.compress", "Сжатие истории"); expanded <=> root.compression-open;
+                SettingsToggleRow { title: I18n.i18n("settings.models.compress-enable", "Включить сжатие истории"); checked: root.compression; changed(value) => { root.compression = value; } }
+            }
+        }
+        CollapsibleSettingsSection {
+            title: "RAG";
+            subtitle: I18n.i18n("settings.models.rag.subtitle", "Поиск по памяти: пресеты пайплайна, эмбеддинги, граф знаний и веса.");
+            glyph: "\u{f0c1}";
+            expanded <=> root.rag-open;
+            InnerSettingsSection {
+                title: I18n.i18n("settings.models.rag-retrieval", "Поиск по памяти"); expanded <=> root.rag-retrieval-open;
+                SettingsToggleRow { title: I18n.i18n("settings.models.rag-enabled", "Включить автоматический RAG"); checked: root.rag-enabled; changed(value) => { root.rag-enabled = value; } }
+            }
+            InnerSettingsSection {
+                title: I18n.i18n("settings.models.rag-embeddings", "Эмбеддинги и индексы"); expanded <=> root.rag-embeddings-open;
+                SettingsText { text: I18n.i18n("settings.models.rag-unavailable", "Статус моделей и индексов будет подключён через presenter."); color: SettingsTheme.muted; wrap: word-wrap; }
+            }
+        }
+    }
+}

@@ -5,6 +5,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum PresetError {
+    #[error("invalid provider request options")]
+    Options,
     #[error("model must be a nonempty Gemini model identifier")]
     Model,
     #[error("API key must be nonempty without whitespace or control characters")]
@@ -60,6 +62,8 @@ pub struct GeminiTemplate {
     model: Arc<str>,
     api_key: Arc<str>,
     settings: GenerationSettings,
+    transforms: Vec<crate::generation::MessageTransform>,
+    options: super::GeminiRequestOptions,
 }
 
 impl fmt::Debug for GeminiTemplate {
@@ -74,17 +78,14 @@ impl fmt::Debug for GeminiTemplate {
 }
 
 impl GeminiTemplate {
+    pub const GOOGLE_ENDPOINT: &'static str = "https://generativelanguage.googleapis.com/v1beta/";
+
     pub fn google(
         model: &str,
         api_key: &str,
         settings: GenerationSettings,
     ) -> Result<Self, PresetError> {
-        Self::new(
-            "https://generativelanguage.googleapis.com/v1beta/",
-            model,
-            api_key,
-            settings,
-        )
+        Self::new(Self::GOOGLE_ENDPOINT, model, api_key, settings)
     }
 
     pub fn new(
@@ -128,7 +129,30 @@ impl GeminiTemplate {
             model: Arc::from(model),
             api_key: Arc::from(api_key),
             settings,
+            transforms: Vec::new(),
+            options: super::GeminiRequestOptions::default(),
         })
+    }
+
+    pub fn with_transforms(mut self, transforms: Vec<crate::generation::MessageTransform>) -> Self {
+        self.transforms = transforms;
+        self
+    }
+
+    pub fn transforms(&self) -> &[crate::generation::MessageTransform] {
+        &self.transforms
+    }
+
+    pub fn with_options(
+        mut self,
+        options: super::GeminiRequestOptions,
+    ) -> Result<Self, PresetError> {
+        options.validate()?;
+        self.options = options;
+        Ok(self)
+    }
+    pub fn options(&self) -> &super::GeminiRequestOptions {
+        &self.options
     }
 
     pub fn model(&self) -> &str {
@@ -136,6 +160,9 @@ impl GeminiTemplate {
     }
     pub fn settings(&self) -> &GenerationSettings {
         &self.settings
+    }
+    pub(crate) fn diagnostic_redaction_values(&self) -> Vec<String> {
+        vec![self.api_key.to_string()]
     }
     pub(crate) fn request_url(&self) -> Url {
         let mut url = self

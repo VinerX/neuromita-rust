@@ -1,0 +1,66 @@
+import { Theme } from "../theme.slint";
+
+export component Label inherits Text {
+    color: Theme.text;
+    font-family: Theme.font-family;
+    font-size: Theme.body-size;
+    vertical-alignment: center;
+    overflow: elide;
+}
+
+export component Icon inherits Image {
+    width: 16px;
+    height: 16px;
+    image-fit: contain;
+    image-rendering: smooth;
+    colorize: Theme.icon;
+}
+
+export component ActionSurface inherits Rectangle {
+    in property <bool> selected;
+    in property <bool> enabled: true;
+    in property <string> label;
+    out property <bool> hovered: touch.has-hover;
+    out property <bool> pressed: touch.pressed;
+    out property <bool> has-focus: focus.has-focus;
+    callback activated();
+    border-radius: 14px;
+    background: !root.enabled ? transparent : root.selected ? Theme.selected : touch.pressed ? Theme.accent-pressed : touch.has-hover ? Theme.hover : transparent;
+    border-width: root.selected || focus.has-focus ? 1px : 0px;
+    border-color: root.selected ? Theme.accent-border : focus.has-focus ? Theme.accent-hover : Theme.accent-border;
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-enabled: root.enabled;
+    accessible-action-default => { if root.enabled { root.activated(); } }
+    forward-focus: focus;
+    focus := FocusScope {
+        enabled: root.enabled;
+        key-pressed(event) => {
+            if event.text == " " || event.text == "\n" || event.text == "\u{000d}" {
+                root.activated();
+                return accept;
+            }
+            return reject;
+        }
+    }
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => { focus.focus(); root.activated(); }
+    }
+}
+
+export component IconButton inherits ActionSurface {
+    in property <image> icon;
+    width: 36px;
+    height: 36px;
+    border-radius: 7px;
+    background: root.hovered ? #b74b7d24 : #ffffff09;
+    border-width: 1px;
+    border-color: #ffffff06;
+    HorizontalLayout { padding: 0px; alignment: center;
+        VerticalLayout { padding: 0px; alignment: center; width: 14px;
+            Icon { source: root.icon; width: 14px; height: 14px; }
+        }
+    }
+}

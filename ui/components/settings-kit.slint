@@ -1,0 +1,269 @@
+import { SettingsTheme } from "../settings/theme.slint";
+import { ActionSurface } from "controls.slint";
+
+export component SettingsText inherits Text {
+    font-family: SettingsTheme.font-family;
+    font-size: 12px;
+    color: SettingsTheme.text;
+    vertical-alignment: center;
+    overflow: elide;
+}
+
+export component SettingsGlyph inherits VerticalLayout {
+    in property <string> text;
+    in property <length> font-size: 14px;
+    in property <color> color: SettingsTheme.icon;
+    width: 16px; min-height: 18px; vertical-stretch: 1;
+    padding: 0px; spacing: 0px; alignment: center;
+    Text { text: root.text; font-family: "Font Awesome 6 Free Solid"; font-weight: 900;
+        font-size: root.font-size; color: root.color; width: 100%; height: 100%;
+        horizontal-alignment: center; vertical-alignment: center; }
+}
+
+export component SettingsSectionHeading inherits HorizontalLayout {
+    in property <string> title;
+    in property <string> description;
+    in property <string> glyph;
+    height: 48px;
+    vertical-stretch: 0;
+    padding: 0px;
+    spacing: 14px;
+    Rectangle {
+        width: 48px; height: 48px; border-radius: 12px;
+        background: SettingsTheme.heading-icon-background;
+        clip: true;
+        HorizontalLayout { padding: 8px; alignment: center;
+            SettingsGlyph { text: root.glyph; width: 32px; height: 32px; font-size: 27px; color: SettingsTheme.accent; }
+        }
+    }
+    VerticalLayout {
+        padding: 0px; spacing: 2px; alignment: center;
+        SettingsText { text: root.title; font-size: 23px; font-weight: 700; }
+        SettingsText { text: root.description; font-size: 12px; color: SettingsTheme.muted; }
+    }
+}
+
+export component SettingsRow inherits Rectangle {
+    in property <string> title;
+    in property <string> description;
+    in property <bool> active: true;
+    min-height: root.description == "" ? 26px : 34px;
+    preferred-height: row-content.preferred-height;
+    vertical-stretch: 0;
+    background: transparent;
+    border-radius: 8px;
+    row-content := HorizontalLayout {
+        padding-left: 2px; padding-right: 2px; spacing: 10px;
+        VerticalLayout {
+            horizontal-stretch: 1; alignment: center; spacing: 2px; padding: 0px;
+            SettingsText { text: root.title; color: root.active ? SettingsTheme.text : SettingsTheme.muted; wrap: word-wrap; overflow: clip; }
+            if root.description != "": SettingsText { text: root.description; color: SettingsTheme.muted; font-size: 11px; wrap: word-wrap; overflow: clip; }
+        }
+        VerticalLayout { padding: 0px; spacing: 0px; alignment: center; horizontal-stretch: 0; @children }
+    }
+}
+
+export component SettingsToggle inherits ActionSurface {
+    in property <bool> checked;
+    callback toggled(bool);
+    label: "Switch";
+    width: 42px; height: 22px; horizontal-stretch: 0;
+    border-width: 0px; background: transparent; border-radius: 11px;
+    activated => { root.toggled(!root.checked); }
+    Rectangle {
+        x: 1px; y: 1px; width: 40px; height: 20px; border-radius: 10px;
+        background: !root.enabled ? SettingsTheme.switch-disabled : root.checked ? SettingsTheme.switch-on : SettingsTheme.switch-off;
+    }
+    if root.enabled: Rectangle { x: root.checked ? 23px : 3px; y: 4px; width: 16px; height: 16px; border-radius: 8px; background: SettingsTheme.switch-shadow; animate x { duration: 140ms; easing: ease-in-out; } }
+    Rectangle {
+        x: root.checked ? 23px : 3px; y: 3px;
+        width: 16px; height: 16px; border-radius: 8px;
+        background: root.enabled ? SettingsTheme.switch-knob : SettingsTheme.switch-disabled-knob;
+        border-width: 1px; border-color: root.enabled ? SettingsTheme.switch-knob-border : SettingsTheme.switch-disabled-border;
+        animate x { duration: 140ms; easing: ease-in-out; }
+    }
+}
+
+export component SettingsToggleRow inherits SettingsRow {
+    in property <bool> checked;
+    callback changed(bool);
+    SettingsToggle {
+        label: root.title;
+        checked: root.checked;
+        enabled: root.active;
+        toggled(checked) => { root.changed(checked); }
+    }
+}
+
+export component SettingsCheckbox inherits ActionSurface {
+    in property <bool> checked;
+    callback toggled(bool);
+    width: 20px; height: 20px; horizontal-stretch: 0;
+    label: "Checkbox";
+    border-radius: 5px; border-width: 1px;
+    border-color: root.checked ? SettingsTheme.accent-alt : SettingsTheme.muted;
+    background: root.checked ? SettingsTheme.accent : SettingsTheme.input;
+    activated => { root.toggled(!root.checked); }
+    if root.checked: SettingsGlyph { text: "\u{f00c}"; width: 100%; height: 100%; font-size: 11px; color: white; }
+}
+
+export component SettingsTextField inherits Rectangle {
+    in-out property <string> value;
+    in property <string> placeholder;
+    in property <bool> editable: true;
+    callback accepted(string);
+    height: 38px; min-width: 60px;
+    background: SettingsTheme.field; border-width: 1px;
+    border-color: input.has-focus ? SettingsTheme.field-focus-border : SettingsTheme.field-border;
+    border-radius: 10px;
+    HorizontalLayout { padding-left: 10px; padding-right: 10px; padding-top: 3px; padding-bottom: 3px;
+        input := TextInput {
+            text <=> root.value; color: SettingsTheme.text;
+            font-family: SettingsTheme.font-family; font-size: 12px;
+            enabled: root.editable; single-line: true;
+            vertical-alignment: center;
+            accepted => { root.accepted(root.value); }
+        }
+    }
+    if root.value == "": HorizontalLayout { padding-left: 10px; padding-right: 10px; padding-top: 3px; padding-bottom: 3px;
+        SettingsText { text: root.placeholder; color: SettingsTheme.muted; horizontal-stretch: 1;
+            touch-area := TouchArea { clicked => { input.focus(); } }
+        }
+    }
+}
+
+export component SettingsEntryRow inherits SettingsRow {
+    in-out property <string> value;
+    in property <string> placeholder;
+    callback committed(string);
+    SettingsTextField {
+        width: max(140px, root.width / 3);
+        value <=> root.value; editable: root.active; placeholder: root.placeholder;
+        accepted(value) => { root.committed(value); }
+    }
+}
+
+export component SettingsActionButton inherits ActionSurface {
+    in property <string> text;
+    label: root.text;
+    height: 36px; horizontal-stretch: 0;
+    border-radius: 10px; border-width: 1px;
+    border-color: self.hovered ? SettingsTheme.button-hover-border : SettingsTheme.button-border;
+    background: self.pressed ? SettingsTheme.button-pressed : self.hovered ? SettingsTheme.button-hover : SettingsTheme.button;
+    HorizontalLayout {
+        padding-left: 14px; padding-right: 14px;
+        SettingsText { text: root.text; font-weight: 700; color: root.enabled ? SettingsTheme.text : SettingsTheme.muted; }
+    }
+}
+
+export component SettingsButtonRow inherits SettingsRow {
+    in property <string> button-text;
+    callback clicked();
+    SettingsActionButton { text: root.button-text; enabled: root.active; activated => { root.clicked(); } }
+}
+
+export component SettingsChoiceRow inherits SettingsRow {
+    in property <[string]> options;
+    in property <string> value;
+    callback changed(string);
+    Rectangle {
+        width: max(160px, root.width / 3); height: 38px;
+        background: SettingsTheme.field; border-color: SettingsTheme.field-border;
+        border-width: 1px; border-radius: 10px;
+        HorizontalLayout {
+            padding-left: 10px; padding-right: 10px; spacing: 8px;
+            SettingsText { text: root.value; horizontal-stretch: 1; }
+            SettingsGlyph { text: "\u{f078}"; width: 12px; color: SettingsTheme.accent; font-size: 10px; }
+        }
+        TouchArea { enabled: root.active; mouse-cursor: pointer; clicked => { menu.show(); } }
+        menu := PopupWindow {
+            y: parent.height + 3px; width: parent.width;
+            height: min(250px, root.options.length * 34px + 8px);
+            close-policy: close-on-click-outside;
+            Rectangle {
+                width: 100%; height: 100%; background: SettingsTheme.popup;
+                border-radius: 9px; border-width: 1px; border-color: SettingsTheme.border;
+                VerticalLayout {
+                    padding: 4px; spacing: 2px;
+                    for option in root.options: ActionSurface {
+                        height: 32px; label: option;
+                        HorizontalLayout { padding-left: 8px; SettingsText { text: option; } }
+                        activated => { root.changed(option); menu.close(); }
+                    }
+                }
+            }
+        }
+    }
+}
+
+component StepperButton inherits ActionSurface {
+    in property <bool> decrease;
+    width: 36px; height: 38px;
+    border-width: 0px;
+    border-radius: 0px;
+    border-top-left-radius: root.decrease ? 9px : 0px;
+    border-bottom-left-radius: root.decrease ? 9px : 0px;
+    border-top-right-radius: root.decrease ? 0px : 9px;
+    border-bottom-right-radius: root.decrease ? 0px : 9px;
+    background: self.pressed ? SettingsTheme.stepper-pressed : self.hovered ? SettingsTheme.stepper-hover : SettingsTheme.stepper-button;
+    SettingsText { width: 100%; height: 100%; text: root.label; horizontal-alignment: center; font-size: 17.333px; font-weight: 500; color: root.hovered && root.enabled ? SettingsTheme.text : SettingsTheme.muted; }
+}
+
+export component SettingsNumberRow inherits SettingsRow {
+    in property <int> value;
+    in property <int> minimum: 0;
+    in property <int> maximum: 100;
+    in property <int> step: 1;
+    callback changed(int);
+    Rectangle {
+        width: 144px; height: 40px;
+        background: SettingsTheme.stepper-background;
+        border-width: 1px; border-color: number.valid ? SettingsTheme.stepper-border : SettingsTheme.danger-text;
+        border-radius: 10px;
+        HorizontalLayout { padding: 1px; spacing: 0px;
+            StepperButton { decrease: true; label: "−"; enabled: root.active && root.value > root.minimum; activated => { root.changed(max(root.minimum, root.value - root.step)); } }
+            Rectangle { width: 1px; background: SettingsTheme.stepper-divider; }
+            HorizontalLayout { padding-left: 8px; padding-right: 8px;
+                number := TextInput {
+                    property <bool> valid: self.text.is-float() && self.text.to-float() == round(self.text.to-float()) && self.text.to-float() >= root.minimum && self.text.to-float() <= root.maximum;
+                    text: "" + root.value; single-line: true; enabled: root.active;
+                    font-family: SettingsTheme.font-family; font-size: 12px; font-weight: 700;
+                    color: SettingsTheme.text; horizontal-alignment: center; vertical-alignment: center;
+                    accepted => { if self.valid { root.changed(round(self.text.to-float())); } }
+                    changed has-focus => { if !self.has-focus && self.valid { root.changed(round(self.text.to-float())); } }
+                }
+            }
+            Rectangle { width: 1px; background: SettingsTheme.stepper-divider; }
+            StepperButton { label: "+"; enabled: root.active && root.value < root.maximum; activated => { root.changed(min(root.maximum, root.value + root.step)); } }
+        }
+    }
+}
+
+export component SettingsTextArea inherits Rectangle {
+    in-out property <string> value;
+    callback committed(string);
+    height: 100px; background: SettingsTheme.field;
+    border-width: 1px; border-color: SettingsTheme.field-border; border-radius: 10px;
+    HorizontalLayout { padding-left: 10px; padding-right: 10px; padding-top: 8px; padding-bottom: 8px;
+        TextInput {
+            single-line: false; wrap: word-wrap;
+            text <=> root.value; color: SettingsTheme.text;
+            font-family: SettingsTheme.font-family; font-size: 12px;
+            edited => { root.committed(root.value); }
+        }
+    }
+}
+
+export component SettingsWideEntryRow inherits SettingsRow {
+    in-out property <string> value;
+    in property <string> placeholder;
+    callback committed(string);
+    height: 38px;
+    SettingsTextField {
+        width: max(210px, parent.width * 0.875);
+        value <=> root.value;
+        editable: root.active;
+        placeholder: root.placeholder;
+        accepted(value) => { root.committed(value); }
+    }
+}

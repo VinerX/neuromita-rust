@@ -1,0 +1,1 @@
+{"id":"local_cross_encoder","name":"Local Cross Encoder","version":"0.1.0","kind":"reranker","entrypoint":"plugin.py","api_version":1}

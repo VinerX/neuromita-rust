@@ -1,0 +1,101 @@
+{
+  "fontawesome_version": "6.7.2",
+  "material_design_icons_version": "7.4.47",
+  "files": [
+    {
+      "path": "assets/icons/fontawesome/house.svg",
+      "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.7.2/svgs/solid/house.svg",
+      "sha256": "a2f39593246f7bd7dfcecbe8cf4a0b93926756bbabdd6089b1326545d9389391"
+    },
+    {
+      "path": "assets/icons/fontawesome/gear.svg",
+      "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.7.2/svgs/solid/gear.svg",
+      "sha256": "b9a38444d7af356e89bb9b2d11852847f969e8b9a45981ca0a1387477247ae81"
+    },
+    {
+      "path": "assets/icons/fontawesome/flask.svg",
+      "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.7.2/svgs/solid/flask.svg",
+      "sha256": "d1918885a39ef26750b7ccadd10475f2628eef9b6adcbea25a341a5c219dd676"
+    },
+    {
+      "path": "assets/icons/fontawesome/rectangle-list.svg",
+      "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.7.2/svgs/solid/rectangle-list.svg",
+      "sha256": "ce7449dc1b3fc77b019ba8a51521688f658fada518d4a12608aca390ea80d670"
+    },
+    {
+      "path": "assets/icons/fontawesome/images.svg",
+      "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.7.2/svgs/solid/images.svg",
+      "sha256": "9a99475e5e35f6ac9dcf71164676903a6596552602024a04ba78926b2a71509e"
+    },
+    {
+      "path": "assets/icons/fontawesome/book-open.svg",
+      "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.7.2/svgs/solid/book-open.svg",
+      "sha256": "bbd0f7a90fe63750bcbacadde63e76a6a6a4b731a7ab34a20fc28f0c49f4131c"
+    },
+    {
+      "path": "assets/icons/fontawesome/list.svg",
+      "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.7.2/svgs/solid/list.svg",
+      "sha256": "621ef27f4ebd85d86a08b703889d047d6515a1b008ff6a00e13794cb617df738"
+    },
+    {
+      "path": "assets/icons/fontawesome/play.svg",
+      "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.7.2/svgs/solid/play.svg",
+      "sha256": "2450714e90ceba7026b56f3a926a73b13772210cb9b4ec50b7f3baeacaa439c9"
+    },
+    {
+      "path": "assets/icons/fontawesome/chevron-down.svg",
+      "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.7.2/svgs/solid/chevron-down.svg",
+      "sha256": "a723e5030c161fb85ea9de06a11d25a49b9e8c9648cb1190df7a7b2dc2d724b1"
+    },
+    {
+      "path": "assets/icons/fontawesome/globe.svg",
+      "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.7.2/svgs/solid/globe.svg",
+      "sha256": "c93125b4a491db6105df4dfc34127a54dba390fc36ee44a5096ea20b05163704"
+    },
+    {
+      "path": "assets/icons/fontawesome/check.svg",
+      "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.7.2/svgs/solid/check.svg",
+      "sha256": "238257f08a1167f608209d7ef44fa3eaa59859811a2cedeab34cd9b63667e410"
+    },
+    {
+      "path": "assets/icons/fontawesome/discord.svg",
+      "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.7.2/svgs/brands/discord.svg",
+      "sha256": "5411e43669f6fd0613413ec9f4e605fde9331d112d168da6a228994df25a066d"
+    },
+    {
+      "path": "assets/icons/fontawesome/github.svg",
+      "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.7.2/svgs/brands/github.svg",
+      "sha256": "84b8a97a7f121ece38c5f56d91912a003ef96f500b1d44ca5dc77a270b6e4791"
+    },
+    {
+      "path": "assets/icons/fontawesome/youtube.svg",
+      "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.7.2/svgs/brands/youtube.svg",
+      "sha256": "652f1ec4169ebe810803fba8e8a22e993255794e68d8d9cca3bc61d34eec26ab"
+    },
+    {
+      "path": "assets/icons/fontawesome/python.svg",
+      "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.7.2/svgs/brands/python.svg",
+      "sha256": "04219d3fcd9dc4a3a317cc56cdaa797998b771c12c3ac624c9bdf3631c7645d5"
+    },
+    {
+      "path": "assets/icons/material/unity.svg",
+      "url": "https://unpkg.com/@mdi/svg@7.4.47/svg/unity.svg",
+      "sha256": "83321264f6108ddf3dfcdc3efcd6e797dbe7d2031386d3e595f9da7de3d11013"
+    },
+    {
+      "path": "assets/icons/material/fire.svg",
+      "url": "https://unpkg.com/@mdi/svg@7.4.47/svg/fire.svg",
+      "sha256": "cd8b4696fe873c4124ed80ef926082ba89c2b8c653c56f2edaa37a64610ce9fd"
+    },
+    {
+      "path": "assets/icons/fontawesome/LICENSE.txt",
+      "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.7.2/LICENSE.txt",
+      "sha256": "9b914eae88817d63b576eab5aafde7068c7a1abae125d7cdfb034f1da43a9afc"
+    },
+    {
+      "path": "assets/icons/material/LICENSE",
+      "url": "https://unpkg.com/@mdi/svg@7.4.47/LICENSE",
+      "sha256": "f3bc8715bad84b26396bb42d2abd11f919cf58163be158eab79ecbaabf84cdf2"
+    }
+  ]
+}

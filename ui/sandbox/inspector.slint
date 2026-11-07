@@ -1,0 +1,423 @@
+import { CharacterCatalog } from "../characters/catalog.slint";
+import { CharacterPortrait } from "../characters/portrait.slint";
+import { MemoryUi } from "memory.slint";
+import { ConversationUi } from "admin.slint";
+import { ScrollView } from "std-widgets.slint";
+import { SandboxTheme, Fa } from "theme.slint";
+import { Caption, Glyph, GhostButton, QuickAction, GearButton, Strip, ValueRow, StatusRow, Centered } from "controls.slint";
+import { ActionSurface } from "../components/controls.slint";
+import { I18n } from "../i18n.slint";
+
+component CharacterSelector inherits Rectangle {
+    in property <int> character;
+    callback selected(int);
+    background: SandboxTheme.input;
+    border-width: 1px; border-color: #ffffff14; border-radius: 8px;
+    height: 32px;
+    HorizontalLayout {
+        padding-left: 7px; padding-right: 5px; spacing: 5px;
+        Caption {
+            text: CharacterCatalog.name(CharacterCatalog.entries[root.character]);
+            font-size: 12px; horizontal-stretch: 1;
+        }
+        Glyph { text: Fa.down; width: 16px; font-size: 11px; }
+    }
+    TouchArea { mouse-cursor: pointer; clicked => { menu.show(); } }
+    menu := PopupWindow {
+        y: root.height + 3px; width: root.width; height: min(300px, CharacterCatalog.entries.length * 31px + 8px);
+        Rectangle {
+            background: #161322; border-radius: 9px; border-width: 1px; border-color: #b74b7d66;
+            VerticalLayout {
+                padding: 4px; spacing: 1px;
+                for entry in CharacterCatalog.entries: ActionSurface {
+                    label: CharacterCatalog.name(entry); height: 30px;
+                    HorizontalLayout { padding-left: 7px; padding-right: 7px; spacing: 7px;
+                        Centered { width: 24px; CharacterPortrait { width: 24px; height: 24px; character: entry.index; surface: #161322; } }
+                        Caption { text: CharacterCatalog.name(entry); horizontal-stretch: 1; }
+                    }
+                    activated => { root.selected(entry.index); menu.close(); }
+                }
+            }
+        }
+    }
+}
+
+component SessionSelection inherits VerticalLayout {
+    in property <int> character;
+    in property <string> model;
+    in property <string> preset;
+    callback selected(int);
+    callback settings();
+    padding: 0px; spacing: 8px;
+    HorizontalLayout {
+        spacing: 8px; height: 32px;
+        Caption { text: I18n.i18n("sandbox.label.character", "Персонаж"); color: SandboxTheme.muted; font-size: 12px; min-width: 104px; }
+        Centered { width: 32px; CharacterPortrait { character: root.character; width: 32px; height: 32px; surface: SandboxTheme.panel; } }
+        CharacterSelector { character: root.character; horizontal-stretch: 1; selected(id) => { root.selected(id); } }
+        Centered { width: 28px; GearButton { width: 28px; height: 28px; background: self.hovered ? #c04c80 : #b74b7d; label: I18n.i18n("sandbox.settings.character", "Настройки персонажа"); activated => { root.settings(); } } }
+    }
+    ValueRow { title: I18n.i18n("sandbox.label.prompt", "Набор промптов"); value: root.preset; }
+    ValueRow { title: I18n.i18n("sandbox.label.model", "Модель"); value: root.model == "" ? "—" : root.model; }
+}
+
+component CaptureRow inherits HorizontalLayout {
+    in property <string> title;
+    callback settings();
+    height: 28px; spacing: 8px; padding: 0px;
+    Centered { width: 12px; Rectangle { width: 12px; height: 12px; border-radius: 6px; background: #ffffff12; border-width: 1px; border-color: #ffffff24; } }
+    Caption { text: root.title; horizontal-stretch: 1; font-size: 12px; color: SandboxTheme.muted; }
+    Centered { width: 40px; Rectangle { width: 40px; height: 20px; border-radius: 10px; background: #ffffff1a;
+        Rectangle { x: 2px; y: 2px; width: 16px; height: 16px; border-radius: 8px; background: #d1ced8; }
+    } }
+    Centered { width: 26px; GearButton { label: root.title; activated => { root.settings(); } } }
+}
+
+component SessionTab inherits ScrollView {
+    in property <int> character;
+    in property <string> model;
+    in property <string> preset;
+    in property <string> address;
+    in property <int> clients;
+    in property <bool> server-running;
+    in property <bool> connected;
+    in property <bool> connecting;
+    in property <bool> voice-enabled;
+    in property <string> anchor;
+    in property <int> active;
+    in-out property <string> model-input;
+    callback connect(string);
+    callback selected(int);
+    callback refresh();
+    callback settings();
+    content-width: self.visible-width;
+    VerticalLayout {
+        padding-left: 2px; padding-right: 10px; padding-top: 12px; padding-bottom: 4px;
+        spacing: 12px; alignment: start;
+        Strip {
+            title: I18n.i18n("sandbox.section.session", "Активная сессия"); glyph: Fa.badge;
+            SessionSelection {
+                character: root.character; model: root.model; preset: root.preset;
+                selected(id) => { root.selected(id); }
+                settings => { root.settings(); }
+            }
+        }
+        Strip {
+            title: I18n.i18n("sandbox.section.status", "Статус"); glyph: Fa.wave;
+            HorizontalLayout {
+                height: 29px; spacing: 8px;
+                Caption { text: I18n.i18n("sandbox.label.game", "Связь с игрой"); color: SandboxTheme.muted; min-width: 88px; }
+                Centered { width: 80px; Rectangle {
+                    width: 80px; height: 20px; background: #ffffff0f; border-radius: 8px;
+                    Caption { text: root.clients > 0 ? I18n.i18n("sandbox.status.connected", "Подключено") + " · " + root.clients : I18n.i18n("sandbox.no-link", "Нет связи"); font-size: 10.6667px; horizontal-alignment: center; color: SandboxTheme.muted; width: 100%; height: 100%; }
+                } }
+                Rectangle { horizontal-stretch: 1; }
+                Centered { width: 40px; Rectangle { width: 40px; height: 20px; border-radius: 10px; background: #ffffff1e;
+                    Rectangle { x: root.server-running ? 22px : 2px; y: 2px; width: 16px; height: 16px; border-radius: 8px; background: root.server-running ? #79e78c : #d1ced8; }
+                } }
+                Centered { width: 26px; GearButton { label: I18n.i18n("sandbox.label.game", "Связь с игрой"); activated => { root.settings(); } } }
+            }
+            StatusRow {
+                title: I18n.i18n("sandbox.label.voice", "Голос");
+                state: root.voice-enabled ? I18n.i18n("sandbox.status.not-ready", "Не готово") : I18n.i18n("sandbox.status.off", "Выкл.");
+                active: false; checked: root.voice-enabled; settings => { root.settings(); }
+            }
+            StatusRow { title: I18n.i18n("sandbox.label.microphone", "Микрофон"); state: I18n.i18n("sandbox.status.off", "Выкл."); active: false; checked: false; settings => { root.settings(); } }
+            StatusRow { title: "RAG"; state: I18n.i18n("sandbox.status.off", "Выкл."); active: false; checked: false; settings => { root.settings(); } }
+        }
+        Strip {
+            title: I18n.i18n("sandbox.section.last-request", "Последний запрос"); glyph: Fa.list;
+            ValueRow { title: I18n.i18n("sandbox.label.active", "Активных запросов"); value: root.active;
+                right-aligned: true; }
+            ValueRow { title: I18n.i18n("sandbox.label.connection", "Подключение");
+                value: root.connecting ? I18n.i18n("sandbox.connecting", "Подключение…") : root.connected ? I18n.i18n("sandbox.connected", "Подключено") : I18n.i18n("sandbox.disconnected", "Не подключено");
+                right-aligned: true;
+            }
+        }
+        Strip {
+            title: I18n.i18n("sandbox.section.capture", "Захват"); glyph: Fa.capture;
+            CaptureRow { title: I18n.i18n("sandbox.capture.auto", "Авто-прикрепление"); settings => { root.settings(); } }
+            CaptureRow { title: I18n.i18n("sandbox.capture.screen", "Захват экрана"); settings => { root.settings(); } }
+            CaptureRow { title: I18n.i18n("sandbox.capture.camera", "Захват с камеры"); settings => { root.settings(); } }
+        }
+        Strip {
+            title: I18n.i18n("sandbox.section.quick", "Быстрые действия"); glyph: Fa.bolt;
+            QuickAction { text: I18n.i18n("sandbox.action.last", "Посмотреть последний запрос"); activated => { ConversationUi.trace(); } }
+            QuickAction { text: I18n.i18n("sandbox.action.character", "Настройки персонажа"); activated => { root.settings(); } }
+            QuickAction { text: I18n.i18n("sandbox.action.settings", "Полные настройки"); activated => { root.settings(); } }
+            QuickAction { text: I18n.i18n("conversation.reset.title", "Сбросить контекст персонажа?"); activated => { ConversationUi.preview(2); } border-color: #ff6e8c59; }
+        }
+    }
+}
+
+component StateBar inherits VerticalLayout {
+    in property <string> title;
+    in property <string> value;
+    in property <float> amount;
+    in property <color> fill;
+    height: 36px; spacing: 3px;
+    HorizontalLayout {
+        height: 19px; spacing: 5px;
+        Caption { text: root.title; font-size: 12px; font-weight: 600; color: SandboxTheme.muted; horizontal-stretch: 1; }
+        Caption { text: root.value; font-size: 12px; font-weight: 700; horizontal-alignment: right; }
+    }
+    Rectangle { height: 8px; background: #ffffff0f; border-radius: 4px;
+        Rectangle { x: 0px; y: 0px; width: max(0px, min(parent.width, parent.width * root.amount / 100)); height: 8px; background: root.fill; border-radius: 4px; }
+    }
+}
+
+component StateTab inherits ScrollView {
+    in property <int> character;
+    in property <string> attitude;
+    in property <string> boredom;
+    in property <string> stress;
+    in property <string> accepted;
+    in property <string> anchor;
+    in property <int> message-count;
+    callback settings();
+    callback open-memory(int);
+    content-width: self.visible-width;
+    VerticalLayout {
+        padding-left: 2px; padding-right: 10px; padding-top: 12px; padding-bottom: 4px; spacing: 12px; alignment: start;
+        Rectangle {
+            background: #0e101ff2; border-color: SandboxTheme.border; border-width: 1px; border-radius: 16px;
+            VerticalLayout {
+                padding: 14px; spacing: 10px;
+                HorizontalLayout { height: 20px; spacing: 6px;
+                    Glyph { text: Fa.pulse; width: 14px; font-size: 14px; }
+                    Caption { text: I18n.i18n("sandbox.state.title", "Состояние персонажа"); font-size: 14px; font-weight: 800; }
+                }
+                StateBar { title: I18n.i18n("sandbox.state.attitude", "Отношение"); value: root.attitude; amount: root.attitude.to-float(); fill: #ff5ca8; }
+                StateBar { title: I18n.i18n("sandbox.state.boredom", "Скука"); value: root.boredom; amount: root.boredom.to-float(); fill: #9d6cff; }
+                StateBar { title: I18n.i18n("sandbox.state.stress", "Стресс"); value: root.stress; amount: root.stress.to-float(); fill: #ffb86b; }
+            }
+        }
+        Rectangle {
+            background: #0e101ff2; border-color: SandboxTheme.border; border-width: 1px; border-radius: 16px;
+            VerticalLayout {
+                padding: 14px; spacing: 7px;
+                Caption { text: I18n.i18n("sandbox.state.variables", "Все переменные"); font-size: 12px; font-weight: 700; }
+                ValueRow { title: I18n.i18n("sandbox.state.attitude", "Отношение"); value: root.attitude; }
+                ValueRow { title: I18n.i18n("sandbox.state.boredom", "Скука"); value: root.boredom; }
+                ValueRow { title: I18n.i18n("sandbox.state.stress", "Стресс"); value: root.stress; }
+                ValueRow { title: I18n.i18n("sandbox.state.accepted", "Принято ответов"); value: root.accepted; }
+            }
+        }
+        Rectangle {
+            background: #0e101ff2; border-color: SandboxTheme.border; border-width: 1px; border-radius: 16px;
+            VerticalLayout {
+                padding: 14px; spacing: 8px;
+                Caption { text: I18n.i18n("sandbox.state.memory", "Контекст и память"); font-size: 14px; font-weight: 800; }
+                ValueRow { title: I18n.i18n("sandbox.state.messages", "Сообщений в окне"); value: root.message-count; }
+                ValueRow { title: I18n.i18n("sandbox.state.memories", "Воспоминаний"); value: MemoryUi.character == root.character ? MemoryUi.active : "—"; }
+                ValueRow { title: I18n.i18n("sandbox.state.forgotten", "Забыто (RAG)"); value: MemoryUi.character == root.character ? MemoryUi.forgotten : "—"; }
+                ValueRow { title: I18n.i18n("sandbox.state.missing", "Без эмбеддинга"); value: "—"; }
+                ValueRow { title: I18n.i18n("sandbox.state.trash", "Корзина"); value: MemoryUi.character == root.character ? MemoryUi.deleted : "—"; }
+                ValueRow { title: I18n.i18n("sandbox.state.last", "Посл. сообщение"); value: "—"; }
+                ValueRow { title: I18n.i18n("sandbox.state.db-size", "Размер БД"); value: "—"; }
+                QuickAction { text: I18n.i18n("sandbox.state.open-memory", "Открыть RAG / память"); activated => { root.open-memory(root.character); } }
+            }
+        }
+    }
+}
+
+component CheckRow inherits HorizontalLayout {
+    in property <string> title;
+    height: 25px; spacing: 9px;
+    Centered { width: 15px; Rectangle { width: 15px; height: 15px; background: #080912; border-radius: 4px; border-width: 1px; border-color: #ffffff24; } }
+    Caption { text: root.title; font-size: 12px; color: SandboxTheme.muted; horizontal-stretch: 1; }
+}
+
+component DebugTab inherits ScrollView {
+    in property <int> character;
+    in property <string> model;
+    in property <string> preset;
+    in property <string> anchor;
+    in property <int> message-count;
+    in property <bool> voice-enabled;
+    callback refresh();
+    callback settings();
+    callback logs();
+    content-width: self.visible-width;
+    VerticalLayout {
+        padding-left: 2px; padding-right: 10px; padding-top: 12px; padding-bottom: 4px; spacing: 12px; alignment: start;
+        Strip {
+            title: I18n.i18n("sandbox.debug.display", "Отображение сообщений"); glyph: Fa.eye;
+            CheckRow { title: I18n.i18n("sandbox.debug.thinking", "Показывать мышление"); }
+            CheckRow { title: I18n.i18n("sandbox.debug.timestamps", "Показывать время сообщений"); }
+            CheckRow { title: I18n.i18n("sandbox.debug.system", "Показывать системные сообщения"); }
+            CheckRow { title: I18n.i18n("sandbox.debug.tokens", "Показывать статистику токенов/стоимости"); }
+        }
+        Strip {
+            title: I18n.i18n("sandbox.debug.context", "Контекст сессии"); glyph: Fa.list;
+            ValueRow { title: I18n.i18n("sandbox.label.character", "Персонаж"); value: CharacterCatalog.name(CharacterCatalog.entries[root.character]); right-aligned: true; }
+            ValueRow { title: I18n.i18n("sandbox.debug.prompts", "Промпты"); value: root.preset; right-aligned: true; }
+            ValueRow { title: I18n.i18n("sandbox.label.model", "Модель"); value: root.model; right-aligned: true; }
+            ValueRow { title: I18n.i18n("sandbox.label.voice", "Голос"); value: root.voice-enabled ? I18n.i18n("sandbox.status.not-ready", "Не готово") : I18n.i18n("sandbox.status.off", "Выкл."); right-aligned: true; }
+            ValueRow { title: "ASR"; value: "—"; right-aligned: true; }
+            ValueRow { title: I18n.i18n("sandbox.debug.rag", "RAG-режим"); value: "—"; right-aligned: true; }
+            ValueRow { title: I18n.i18n("sandbox.state.messages", "Сообщений в окне"); value: root.message-count; right-aligned: true; }
+            ValueRow { title: I18n.i18n("sandbox.debug.memory", "Память"); value: "—"; right-aligned: true; }
+            ValueRow { title: I18n.i18n("sandbox.capture.screen", "Захват экрана"); value: "—"; right-aligned: true; }
+            ValueRow { title: I18n.i18n("sandbox.debug.camera", "Камера"); value: "—"; right-aligned: true; }
+            QuickAction { text: I18n.i18n("sandbox.debug.refresh", "Обновить сводку"); activated => { root.refresh(); } }
+        }
+        Strip {
+            title: I18n.i18n("sandbox.debug.diagnostics", "Диагностика"); glyph: Fa.tools;
+            QuickAction { text: I18n.i18n("sandbox.debug.db", "Открыть DB персонажа"); enabled: false; }
+            QuickAction { text: I18n.i18n("sandbox.debug.logs", "Открыть страницу логов"); activated => { root.logs(); } }
+            QuickAction { text: I18n.i18n("sandbox.debug.api", "Открыть API-настройки"); activated => { root.settings(); } }
+        }
+        Strip {
+            title: I18n.i18n("sandbox.debug.params", "Параметры отладки"); glyph: Fa.bug;
+            Caption { text: I18n.i18n("sandbox.debug.structured", "Structured output (дебаг)"); font-size: 12px; font-weight: 700; }
+            Rectangle { height: 29px; width: 120px; background: SandboxTheme.input; border-width: 1px; border-color: SandboxTheme.border; border-radius: 8px;
+                HorizontalLayout { padding-left: 10px; padding-right: 10px;
+                    Caption { text: I18n.i18n("sandbox.debug.off", "Выкл"); }
+                }
+            }
+            CheckRow { title: I18n.i18n("sandbox.debug.expanded", "Развёрнуто по умолчанию"); }
+            CheckRow { title: I18n.i18n("sandbox.debug.limits", "Ограничивать structured output в sandbox"); }
+            Caption { text: I18n.i18n("sandbox.debug.insert", "Вставить system-сообщение в историю"); font-size: 12px; font-weight: 700; }
+            Rectangle { height: 70px; background: SandboxTheme.input; border-width: 1px; border-color: SandboxTheme.border; border-radius: 9px;
+                VerticalLayout { padding: 10px; spacing: 0px; alignment: start;
+                    Caption { text: I18n.i18n("sandbox.debug.insert-placeholder", "Текст system-сообщения…"); color: SandboxTheme.muted; }
+                    Rectangle { vertical-stretch: 1; }
+                }
+            }
+            CheckRow { title: I18n.i18n("sandbox.debug.as-user", "Как пользователь [Системное]: (видно Gemini)"); }
+            QuickAction { text: I18n.i18n("sandbox.debug.submit-system", "Отправить системное"); enabled: false; }
+            Caption { text: I18n.i18n("sandbox.debug.snapshot", "Snapshot истории"); font-size: 12px; font-weight: 700; }
+            QuickAction { text: I18n.i18n("sandbox.debug.save", "Сохранить snapshot"); enabled: false; }
+            QuickAction { text: I18n.i18n("sandbox.debug.load", "Загрузить snapshot"); enabled: false; }
+            Caption { text: I18n.i18n("sandbox.debug.viewer", "Просмотр контекста запроса"); font-size: 12px; font-weight: 700; }
+            QuickAction { text: I18n.i18n("sandbox.debug.view-request", "Посмотреть последний запрос"); enabled: false; }
+            QuickAction { text: I18n.i18n("sandbox.debug.view-response", "Посмотреть последний ответ"); enabled: false; }
+            CheckRow { title: I18n.i18n("sandbox.debug.capture", "Сохранять вход генерации"); }
+        }
+    }
+}
+
+component TabButton inherits ActionSurface {
+    in property <string> title;
+    in property <bool> active;
+    height: 34px; border-radius: 14px;
+    background: root.active ? #b74b7d1a : self.hovered ? #ffffff0a : transparent;
+    border-width: 0px;
+    HorizontalLayout {
+        padding-left: 16px; padding-right: 16px; spacing: 0px;
+        Caption { text: root.title; color: root.active ? SandboxTheme.text : SandboxTheme.muted; font-size: 12.6667px; font-weight: 700; horizontal-alignment: center; }
+    }
+    if root.active: VerticalLayout { padding: 0px; spacing: 0px;
+        Rectangle { vertical-stretch: 1; }
+        Rectangle { height: 2px; background: SandboxTheme.accent-alt; }
+    }
+}
+
+export component SandboxInspector inherits Rectangle {
+    in property <int> character;
+    in property <string> model;
+    in property <string> preset;
+    in property <string> address;
+    in property <int> clients;
+    in property <bool> server-running;
+    in property <bool> connected;
+    in property <bool> connecting;
+    in property <bool> voice-enabled;
+    in property <string> anchor;
+    in property <int> active;
+    in property <string> attitude;
+    in property <string> boredom;
+    in property <string> stress;
+    in property <string> accepted;
+    in property <int> message-count;
+    in-out property <string> model-input;
+    callback connect(string);
+    callback selected(int);
+    callback refresh();
+    callback settings();
+    callback open-memory(int);
+    callback logs();
+    in-out property <bool> collapsed: false;
+    in-out property <int> tab: 0;
+    width: root.collapsed ? 60px : SandboxTheme.inspector-width;
+    background: #0e101ff7; border-radius: 20px; border-width: 1px; border-color: SandboxTheme.border;
+    if !root.collapsed: VerticalLayout {
+        padding: 14px; spacing: 10px;
+        HorizontalLayout {
+            height: 41px; spacing: 8px;
+            HorizontalLayout {
+                height: 41px; spacing: 8px; horizontal-stretch: 1;
+                TabButton { title: I18n.i18n("sandbox.tab.session", "Сессия"); active: root.tab == 0; activated => { root.tab = 0; } }
+                TabButton { title: I18n.i18n("sandbox.tab.state", "Состояние"); active: root.tab == 1; activated => { root.tab = 1; } }
+                TabButton { title: I18n.i18n("sandbox.tab.debug", "Отладка"); active: root.tab == 2; activated => { root.tab = 2; } }
+                Rectangle { horizontal-stretch: 1; }
+            }
+            Centered { width: 34px; ActionSurface {
+                label: I18n.i18n("sandbox.collapse", "Свернуть панель");
+                width: 34px; height: 34px; background: self.hovered ? #b74b7d30 : #b74b7d1f; border-radius: 17px;
+                Glyph { text: Fa.collapse; width: parent.width; height: parent.height; font-size: 14px; }
+                activated => { root.collapsed = true; }
+            } }
+        }
+        Rectangle { background: #ffffff0d; height: 1px; }
+        Rectangle {
+            vertical-stretch: 1;
+            if root.tab == 0: SessionTab {
+                width: 100%; height: 100%; character: root.character; model: root.model; preset: root.preset;
+                address: root.address; connected: root.connected; connecting: root.connecting;
+                clients: root.clients; server-running: root.server-running;
+                voice-enabled: root.voice-enabled; anchor: root.anchor; active: root.active;
+                model-input <=> root.model-input; connect(name) => { root.connect(name); }
+                selected(id) => { root.selected(id); }
+                refresh => { root.refresh(); }
+                settings => { root.settings(); }
+            }
+            if root.tab == 1: StateTab {
+                character: root.character;
+                width: 100%; height: 100%; attitude: root.attitude; boredom: root.boredom; stress: root.stress;
+                accepted: root.accepted; anchor: root.anchor; message-count: root.message-count;
+                settings => { root.settings(); }
+                open-memory(id) => { root.open-memory(id); }
+            }
+            if root.tab == 2: DebugTab {
+                width: 100%; height: 100%; character: root.character; model: root.model; preset: root.preset;
+                anchor: root.anchor; message-count: root.message-count; voice-enabled: root.voice-enabled;
+                refresh => { root.refresh(); }
+                settings => { root.settings(); }
+                logs => { root.logs(); }
+            }
+        }
+    }
+    if root.collapsed: VerticalLayout {
+        padding-top: 14px; padding-left: 8px; padding-right: 8px; padding-bottom: 12px; spacing: 8px;
+        ActionSurface {
+            width: 38px; height: 34px; label: I18n.i18n("sandbox.expand", "Развернуть панель");
+            background: self.hovered ? #b74b7d30 : #b74b7d1f; border-radius: 17px;
+            Glyph { text: Fa.expand; width: parent.width; height: parent.height; font-size: 14px; }
+            activated => { root.collapsed = false; }
+        }
+        Rectangle { width: 24px; height: 1px; background: #ffffff14; }
+        ActionSurface {
+            width: 38px; height: 38px; label: I18n.i18n("sandbox.tab.session", "Сессия");
+            background: self.hovered ? #b74b7d24 : root.tab == 0 ? #b74b7d33 : #ffffff0a;
+            border-width: 1px; border-color: root.tab == 0 ? #b74b7d8c : #ffffff0f; border-radius: 12px;
+            Glyph { text: Fa.badge; width: parent.width; height: parent.height; font-size: 16px; }
+            activated => { root.tab = 0; root.collapsed = false; }
+        }
+        ActionSurface {
+            width: 38px; height: 38px; label: I18n.i18n("sandbox.tab.state", "Состояние");
+            background: self.hovered ? #b74b7d24 : root.tab == 1 ? #b74b7d33 : #ffffff0a;
+            border-width: 1px; border-color: root.tab == 1 ? #b74b7d8c : #ffffff0f; border-radius: 12px;
+            Glyph { text: Fa.pulse; width: parent.width; height: parent.height; font-size: 16px; }
+            activated => { root.tab = 1; root.collapsed = false; }
+        }
+        ActionSurface {
+            width: 38px; height: 38px; label: I18n.i18n("sandbox.tab.debug", "Отладка");
+            background: self.hovered ? #b74b7d24 : root.tab == 2 ? #b74b7d33 : #ffffff0a;
+            border-width: 1px; border-color: root.tab == 2 ? #b74b7d8c : #ffffff0f; border-radius: 12px;
+            Glyph { text: Fa.bug; width: parent.width; height: parent.height; font-size: 16px; }
+            activated => { root.tab = 2; root.collapsed = false; }
+        }
+        Rectangle { vertical-stretch: 1; }
+    }
+}

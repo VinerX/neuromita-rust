@@ -1,0 +1,97 @@
+import { CharacterCatalog } from "../characters/catalog.slint";
+import { CharacterPortrait } from "../characters/portrait.slint";
+import { SandboxTheme } from "theme.slint";
+import { Caption, GhostButton } from "controls.slint";
+import { ChatRow, ChatStatus } from "models.slint";
+import { I18n } from "../i18n.slint";
+
+export component StatusText inherits Caption {
+    in property <ChatStatus> status;
+    color: status == ChatStatus.cancelled || status == ChatStatus.text-error || status == ChatStatus.internal-error ? #ff9baf : SandboxTheme.muted;
+    font-size: 11px;
+    text: status == ChatStatus.pending ? I18n.i18n("sandbox.status.pending", "В очереди")
+        : status == ChatStatus.text ? I18n.i18n("sandbox.status.text", "Генерация ответа…")
+        : status == ChatStatus.text-ready ? I18n.i18n("sandbox.status.text-ready", "Предварительный ответ")
+        : status == ChatStatus.voice ? I18n.i18n("sandbox.status.voice", "Подготовка озвучки · ответ ещё не принят")
+        : status == ChatStatus.accepting ? I18n.i18n("sandbox.status.accepting", "Принятие ответа…")
+        : status == ChatStatus.cancelled ? I18n.i18n("sandbox.status.cancelled", "Запрос отменён · ответ не принят")
+        : status == ChatStatus.voice-error ? I18n.i18n("sandbox.status.voice-error", "Текст принят, озвучка не удалась")
+        : status == ChatStatus.success ? I18n.i18n("sandbox.status.success", "Ответ принят")
+        : I18n.i18n("sandbox.status.failed", "Запрос завершился с ошибкой");
+}
+
+component BubbleFrame inherits Rectangle {
+    in property <bool> user;
+    in property <bool> provisional;
+    background: transparent; min-width: 0px; min-height: 36px;
+    property <float> w: self.width / 1px;
+    property <float> h: self.height / 1px;
+    Path {
+        width: 100%; height: 100%;
+        fill: root.user ? SandboxTheme.user-fill : SandboxTheme.assistant-fill;
+        stroke: root.provisional ? SandboxTheme.accent-alt : root.user ? SandboxTheme.user-border : SandboxTheme.assistant-border;
+        stroke-width: 1px;
+        commands: root.user
+            ? "M12 0 H" + (root.w - 20) + " A12 12 0 0 1 " + (root.w - 8) + " 12 V" + (root.h - 12) + " L" + root.w + " " + root.h + " H12 A12 12 0 0 1 0 " + (root.h - 12) + " V12 A12 12 0 0 1 12 0 Z"
+            : "M20 0 H" + (root.w - 12) + " A12 12 0 0 1 " + root.w + " 12 V" + (root.h - 12) + " A12 12 0 0 1 " + (root.w - 12) + " " + root.h + " H0 L8 " + (root.h - 12) + " V12 A12 12 0 0 1 20 0 Z";
+    }
+    @children
+}
+
+export component MessageRow inherits VerticalLayout {
+    in property <ChatRow> item;
+    in property <string> character-name;
+    in property <length> bubble-width;
+    callback cancel(string);
+    padding: 0px; padding-top: 4px; padding-bottom: 4px; spacing: 4px;
+    vertical-stretch: 0;
+    HorizontalLayout {
+        padding: 0px; spacing: 0px;
+        if root.item.user: Rectangle { horizontal-stretch: 1; preferred-width: 0px; }
+        if !root.item.user: HorizontalLayout {
+            padding: 0px; spacing: 0px; width: 44px;
+            VerticalLayout { padding: 0px; alignment: end;
+                if root.item.character-index >= 0: CharacterPortrait { character: root.item.character-index; surface: SandboxTheme.canvas; width: 36px; height: 36px; }
+                if root.item.character-index < 0: Rectangle { width: 36px; height: 36px; border-radius: 18px; background: SandboxTheme.panel; Caption { text: "?"; width: 100%; height: 100%; horizontal-alignment: center; } }
+            }
+            Rectangle { width: 8px; }
+        }
+        BubbleFrame {
+            user: root.item.user; provisional: root.item.can-cancel;
+            width: root.bubble-width; horizontal-stretch: 0;
+            VerticalLayout {
+                padding-left: root.item.user ? 12px : 20px;
+                padding-right: root.item.user ? 20px : 12px;
+                padding-top: 8px; padding-bottom: 8px; spacing: 2px;
+                Caption {
+                    text: root.item.user ? I18n.i18n("sandbox.author.you", "Вы")
+                        : root.item.character-index >= 0 ? CharacterCatalog.name(CharacterCatalog.entries[root.item.character-index])
+                        : root.item.speaker == "World" ? I18n.i18n("sandbox.observation", "Наблюдение")
+                        : root.item.speaker != "" ? root.item.speaker : root.character-name;
+                    color: root.item.user ? #ffd7ea : #ff8fc8;
+                    font-size: SandboxTheme.chat-name-size; font-weight: 700;
+                }
+                Text { text: root.item.text; font-family: SandboxTheme.font-family; font-size: SandboxTheme.chat-size;
+                    color: root.item.user ? #fff6fb : #f3eaf3; wrap: word-wrap; min-width: 0px;
+                }
+                if root.item.sequence != "": Caption { text: root.item.sequence; color: root.item.user ? #ffffff8c : #ffffff6b; font-size: SandboxTheme.chat-time-size; horizontal-alignment: right; }
+            }
+        }
+        if !root.item.user: Rectangle { horizontal-stretch: 1; preferred-width: 0px; }
+        if root.item.user: HorizontalLayout {
+            width: 44px; spacing: 0px; padding: 0px;
+            Rectangle { width: 8px; }
+            VerticalLayout { padding: 0px; alignment: end;
+                Rectangle { width: 36px; height: 36px; border-radius: 18px; background: #ff7ab8;
+                    Caption { text: I18n.i18n("sandbox.avatar.you", "В"); color: #1e1e1e; font-family: "Arial"; font-size: 16px; font-weight: 700; horizontal-alignment: center; width: 100%; height: 100%; }
+                }
+            }
+        }
+    }
+    if root.item.status != ChatStatus.history && root.item.status != ChatStatus.success: HorizontalLayout {
+        padding-left: root.item.user ? 0px : 52px; padding-right: 44px; spacing: 6px; height: 25px;
+        StatusText { status: root.item.status; horizontal-stretch: 1; min-width: 0px; }
+        if root.item.can-cancel: GhostButton { text: I18n.i18n("sandbox.cancel", "Отменить"); height: 25px; activated => { root.cancel(root.item.request-id); } }
+    }
+    if root.item.detail != "": Text { text: root.item.detail; color: #ff9baf; font-family: SandboxTheme.font-family; font-size: 12px; wrap: word-wrap; }
+}

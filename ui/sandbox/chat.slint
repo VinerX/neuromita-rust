@@ -1,0 +1,138 @@
+import { CharacterCatalog } from "../characters/catalog.slint";
+import { ConversationUi } from "admin.slint";
+import { ScrollView } from "std-widgets.slint";
+import { SandboxTheme, Fa } from "theme.slint";
+import { Caption, Glyph, GhostButton, Centered } from "controls.slint";
+import { MessageRow } from "message.slint";
+import { ChatRow } from "models.slint";
+import { ActionSurface } from "../components/controls.slint";
+import { I18n } from "../i18n.slint";
+
+component ConversationStrip inherits Rectangle {
+    in property <int> character;
+    callback refresh();
+    height: 46px; border-radius: 14px; border-width: 1px; border-color: SandboxTheme.border;
+    background: #0e101ff2;
+    HorizontalLayout {
+        padding-left: 14px; padding-right: 14px; padding-top: 8px; padding-bottom: 8px; spacing: 14px;
+        Glyph { text: Fa.heart; color: #ff7eb6; width: 14px; font-size: 14px; }
+        Caption {
+            text: I18n.i18n("sandbox.conversation", "Разговор с ") + CharacterCatalog.conversation-name(CharacterCatalog.entries[root.character]);
+            font-weight: 700; font-size: 13.3333px; horizontal-stretch: 1;
+        }
+        GhostButton { text: I18n.i18n("sandbox.history", "История"); glyph: Fa.database; activated => { ConversationUi.history = true; } }
+        GhostButton { text: I18n.i18n("sandbox.refresh", "Обновить"); glyph: Fa.refresh; activated => { root.refresh(); } }
+        GhostButton { text: I18n.i18n("sandbox.clear-chat", "Очистить чат"); glyph: Fa.trash; activated => { ConversationUi.preview(1); } }
+    }
+}
+
+component ChatComposer inherits VerticalLayout {
+    in-out property <string> draft;
+    in property <bool> connected;
+    in property <bool> sending;
+    in property <int> character;
+    callback send(string);
+    height: 84px; spacing: 4px; padding: 0px;
+    Rectangle {
+        height: 58px; border-radius: 20px; border-width: 1px;
+        border-color: SandboxTheme.border; background: SandboxTheme.input;
+        HorizontalLayout {
+            padding-left: 12px; padding-top: 6px; padding-bottom: 6px; padding-right: 6px; spacing: 4px;
+            Centered { width: 32px; ActionSurface {
+                width: 32px; height: 32px; label: I18n.i18n("sandbox.attach", "Прикрепить изображения");
+                enabled: false; border-radius: 9px;
+                Glyph { text: Fa.attach; color: SandboxTheme.muted; width: parent.width; height: parent.height; font-size: 12px; }
+            } }
+            Rectangle {
+                horizontal-stretch: 1; min-width: 0px;
+                HorizontalLayout { padding-left: 2px; padding-right: 2px; padding-top: 4px; padding-bottom: 4px;
+                    edit := TextInput {
+                        text <=> root.draft;
+                        enabled: true; font-family: SandboxTheme.font-family; font-size: 13.3333px;
+                        color: #f7edf5; selection-background-color: SandboxTheme.accent-alt;
+                        selection-foreground-color: white;
+                        single-line: false; wrap: word-wrap; vertical-alignment: center;
+                        key-pressed(event) => {
+                            if event.text == "\n" && !event.modifiers.shift && root.connected && !root.sending && root.draft != "" {
+                                root.send(root.draft); return accept;
+                            }
+                            return reject;
+                        }
+                    }
+                }
+                if root.draft == "": HorizontalLayout { padding-left: 2px; padding-right: 2px; padding-top: 4px; padding-bottom: 4px;
+                    Caption {
+                        text: I18n.i18n("sandbox.placeholder", "Напиши что-нибудь Мите…");
+                        color: SandboxTheme.muted;
+                        font-size: 13.3333px; vertical-alignment: center;
+                        accessible-role: none;
+                        TouchArea { clicked => { edit.focus(); } }
+                    }
+                }
+            }
+            Centered { width: 32px; ActionSurface {
+                width: 32px; height: 32px; label: I18n.i18n("sandbox.screenshot", "Сделать скриншот экрана");
+                enabled: false; border-radius: 9px;
+                Glyph { text: Fa.camera; color: SandboxTheme.muted; width: parent.width; height: parent.height; font-size: 12px; }
+            } }
+            Centered { width: 32px; ActionSurface {
+                width: 32px; height: 32px; label: I18n.i18n("sandbox.mic", "Микрофон");
+                enabled: false; border-radius: 13px;
+                Glyph { text: Fa.microphone; color: SandboxTheme.muted; width: parent.width; height: parent.height; font-size: 14px; }
+            } }
+            Centered { width: 42px; ActionSurface {
+                width: 42px; height: 42px;
+                label: I18n.i18n("sandbox.send", "Отправить сообщение");
+                enabled: root.connected && !root.sending && root.draft != "";
+                border-radius: 14px; border-width: 0px;
+                background: self.enabled ? (self.pressed ? #bc3981 : self.hovered ? #e6539e : SandboxTheme.accent-alt) : #39303f;
+                Glyph { text: Fa.send; color: parent.enabled ? white : #aaaaaf; font-size: 18px; width: parent.width; height: parent.height; }
+                activated => { root.send(root.draft); }
+            } }
+        }
+    }
+    HorizontalLayout {
+        padding-left: 6px; padding-right: 8px; spacing: 4px; height: 17px;
+        Rectangle { horizontal-stretch: 1; }
+        Caption { text: I18n.i18n("sandbox.context-unavailable", "Контекст: —"); font-size: 10.6667px; color: SandboxTheme.muted; }
+    }
+}
+
+export component SandboxChat inherits Rectangle {
+    in property <[ChatRow]> messages;
+    in property <int> character;
+    in property <bool> connected;
+    in property <bool> sending;
+    in-out property <string> draft;
+    in-out property <bool> follow-tail;
+    callback send(string);
+    callback cancel(string);
+    callback refresh();
+    background: #0e101ff7; border-color: SandboxTheme.border; border-width: 1px; border-radius: 20px;
+    VerticalLayout {
+        padding: 14px; spacing: 12px;
+        ConversationStrip { character: root.character; refresh => { root.refresh(); } }
+        Rectangle {
+            vertical-stretch: 1; background: #090915; border-radius: 12px; clip: true;
+            ScrollView {
+                width: parent.width; height: parent.height;
+                content-width: self.width;
+                VerticalLayout {
+                    padding-left: 6px; padding-right: 6px; padding-top: 4px; padding-bottom: 4px;
+                    spacing: 4px; alignment: start;
+                    for item in root.messages: MessageRow {
+                        item: item;
+                        bubble-width: min(SandboxTheme.max-bubble-width, max(240px, (root.width - 98px) / 2));
+                        character-name: CharacterCatalog.name(CharacterCatalog.entries[root.character]);
+                        cancel(id) => { root.cancel(id); }
+                    }
+                }
+            }
+        }
+        ChatComposer {
+            connected: root.connected; sending: root.sending; character: root.character;
+            draft <=> root.draft;
+            send(text) => { root.send(text); }
+        }
+    }
+}

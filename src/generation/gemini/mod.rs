@@ -1,12 +1,17 @@
+mod options;
 mod template;
+pub use options::{GeminiRequestOptions, GeminiThinking, SystemInstructionMode, ThinkingLevel};
 mod wire;
 
 pub use template::{GeminiTemplate, GenerationSettings, PresetError};
 
-use std::sync::Arc;
+use std::time::SystemTime;
 
-use super::{GenerationError, GenerationProvider, ProviderFuture, ProviderKind, ProviderTemplate};
-use crate::character::CharacterContext;
+use super::provider::GenerationInput;
+use super::{
+    GenerationError, GenerationObserver, GenerationProvider, PreparedRequest, ProviderFuture,
+    ProviderKind, ProviderTemplate,
+};
 
 pub struct GeminiProvider {
     client: reqwest::Client,
@@ -23,33 +28,53 @@ impl GeminiProvider {
 
     async fn execute(
         &self,
-        context: CharacterContext,
+        context: GenerationInput,
         template: GeminiTemplate,
-    ) -> Result<Arc<str>, GenerationError> {
-        let body = wire::encode(context, &template);
-        let mut response = self
-            .client
-            .post(template.request_url())
-            .timeout(template.settings().timeout())
-            .json(&body)
-            .send()
-            .await
-            .map_err(|error| GenerationError::Transport(error.without_url().to_string()))?;
-        if !response.status().is_success() {
-            return Err(GenerationError::Http(response.status().as_u16()));
-        }
-        let mut bytes = Vec::new();
-        while let Some(chunk) = response
-            .chunk()
-            .await
-            .map_err(|error| GenerationError::Transport(error.without_url().to_string()))?
-        {
-            if bytes.len().saturating_add(chunk.len()) > 8 * 1024 * 1024 {
-                return Err(GenerationError::Response("response exceeds 8 MiB".into()));
+        observer: &mut dyn GenerationObserver,
+    ) -> Result<super::StructuredResponse, GenerationError> {
+        let encoded =
+            wire::encode_observed(context.context, &template, &context.prepared_knowledge);
+        let payload_json = serde_json::to_string(&encoded.body).map_err(|error| {
+            GenerationError::Response(format!("cannot encode provider request: {error}"))
+        })?;
+        let mut endpoint = template.request_url();
+        endpoint.set_query(None);
+        endpoint.set_fragment(None);
+        observer.request_prepared(PreparedRequest {
+            protocol: "google_gemini_default".into(),
+            dialect: "gemini_generate_content".into(),
+            provider: ProviderKind::Gemini,
+            model: template.model().into(),
+            endpoint: endpoint.as_str().into(),
+            temperature: template
+                .options()
+                .send_temperature
+                .then(|| template.settings().temperature()),
+            max_output_tokens: template
+                .options()
+                .send_max_output_tokens
+                .then(|| template.settings().max_output_tokens()),
+            prompt: encoded.prompt.into(),
+            payload_json: payload_json.as_str().into(),
+            captured_at: SystemTime::now(),
+        });
+        let bytes = super::http::send_json(
+            self.client
+                .post(template.request_url())
+                .timeout(template.settings().timeout())
+                .header(reqwest::header::CONTENT_TYPE, "application/json")
+                .body(payload_json),
+            observer,
+            wire::observation_metadata,
+        )
+        .await?;
+        match wire::decode(&bytes) {
+            Ok(response) => Ok(response),
+            Err(error) => {
+                observer.failed(&error);
+                Err(error)
             }
-            bytes.extend_from_slice(&chunk);
         }
-        wire::decode(&bytes)
     }
 }
 
@@ -58,15 +83,33 @@ impl GenerationProvider for GeminiProvider {
         ProviderKind::Gemini
     }
 
-    fn generate(
-        &self,
-        context: CharacterContext,
-        template: ProviderTemplate,
-    ) -> ProviderFuture<'_> {
+    fn generate(&self, context: GenerationInput, template: ProviderTemplate) -> ProviderFuture<'_> {
         Box::pin(async move {
             match template {
-                ProviderTemplate::Gemini(template) => self.execute(context, template).await,
+                ProviderTemplate::Gemini(template) => {
+                    self.execute(context, template, &mut NoopObserver).await
+                }
+                other => Err(GenerationError::Unavailable(other.kind())),
+            }
+        })
+    }
+
+    fn generate_observed<'a>(
+        &'a self,
+        context: GenerationInput,
+        template: ProviderTemplate,
+        observer: &'a mut dyn GenerationObserver,
+    ) -> ProviderFuture<'a> {
+        Box::pin(async move {
+            match template {
+                ProviderTemplate::Gemini(template) => {
+                    self.execute(context, template, observer).await
+                }
+                other => Err(GenerationError::Unavailable(other.kind())),
             }
         })
     }
 }
+
+struct NoopObserver;
+impl GenerationObserver for NoopObserver {}

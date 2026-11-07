@@ -1,0 +1,17 @@
+export component Avatar inherits Rectangle {
+    in property <image> source;
+    in property <color> surface;
+    width: 34px;
+    height: 34px;
+    background: root.surface;
+    border-radius: min(root.width, root.height) / 2;
+    clip: true;
+    Image {
+        source: root.source;
+        width: 100%;
+        height: 100%;
+        image-fit: cover;
+        image-rendering: smooth;
+    }
+    Image { source: @image-url("avatar-mask.svg"); width: 100%; height: 100%; colorize: root.surface.with-alpha(1); image-rendering: smooth; }
+}

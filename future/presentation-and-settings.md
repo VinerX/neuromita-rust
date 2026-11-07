@@ -53,6 +53,18 @@ pub enum SpeechInputMode {
 
 Отсутствующее обязательное значение, неверный тип и недопустимое сочетание дают ошибку. Runtime fallback через get(key, default) не является контрактом новой системы. Первоначальное создание конфигурации и миграции надо определить отдельно.
 
+## Выбор модели доступа: typed sections вместо универсальных field paths (2026-11-02)
+
+`SettingsApi::get(settings::AppSettings::characters::mita::presets::react)` как буквальный Rust-путь к полю не компилируется: `AppSettings` — тип структуры, `characters` — её поле, а не вложенный модуль/тип. Для такого синтаксиса потребовались бы отдельные типизированные path keys/lenses либо макрос/генерация идентификаторов полей. При сотнях настроек это второе представление структуры, требующее обслуживания, и оно не улучшает проверку связанных полей при записи.
+
+**Принято для Core:** `SettingsApi::snapshot::<CharactersSettings>()` для чтения раздела, `SettingsApi::edit::<CharactersSettings>(|characters| ...)` для атомарного изменения нескольких полей внутри раздела, `replace` для проверяемой замены. Типизированные поля доступны компилятору как `section.value.mita.presets.react`. Сохранены validation, revision и observer. Один universal `get(path)/set(path, value)` не добавляем без реального пользовательского требования.
+
+**Принято для presentation:** `SettingsPresenter` предоставляет `BoundProperty<T>::get/set/observe` для пользовательских элементов. Например, `presenter.settings.characters.mita.react` и `presenter.settings.presets.active`. Frontend не знает о `SettingsOwner`, не обязан копировать/заменять весь раздел и не поддерживает вторую копию данных. UI bindings не выносятся в `SettingsApi` и не запускают повторный setter при получении обновления.
+
+`AppSettings.presets.active` хранит только выбор активного пресета. Настройки отдельного персонажа — `AppSettings.characters.mita.presets.reply/react/initiate` и аналогичные для остальных типов. Сами определения конфигураций LLM принадлежат независимому каталогу пресетов, не `AppSettings`. При выполнении GenerationCommand исполнитель один раз разрешает назначение в готовый `GenerationPreset`, который дальше передаётся по значению.
+
+JSON настройки схемы v1 (`presets.characters`) явно мигрируются к v2 (`characters.{character}.presets`), не меняя назначений; не допускается незаметное восстановление default при повреждении сохранённой секции.
+
 ## SettingsApi и владелец
 
 Статический SettingsApi оправдан общими пользовательскими настройками, доступными GUI, terminal и сетевым операциям.

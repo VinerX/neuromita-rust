@@ -1,10 +1,31 @@
 [package]
 name = "neuromita"
+default-run = "neuromita"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.89"
 
+[[bin]]
+name = "neuromita-gui"
+path = "src/bin/neuromita-gui/main.rs"
+required-features = ["gui"]
+
+[[example]]
+name = "gui_snapshot"
+required-features = ["gui"]
+
+[features]
+default = ["sqlite-system"]
+sqlite-system = ["dep:rusqlite"]
+gui = ["dep:slint", "dep:slint-build"]
+
 [dependencies]
+base64 = "0.23"
+chrono = { version = "0.4.45", default-features = false, features = ["std", "serde"] }
+chrono-tz = { version = "0.10.4", default-features = false, features = ["std"] }
+iana-time-zone = "0.1.65"
+rusqlite = { version = "0.41", optional = true, default-features = false, features = ["bundled", "libsqlite3-sys"] }
+ring = "0.17.14"
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls", "http2", "system-proxy"] }
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"
@@ -12,3 +33,15 @@ thiserror = "2"
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.7", features = ["rt"] }
 uuid = { version = "1", features = ["v4", "serde"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "ansi", "env-filter", "registry", "std"] }
+slint = { version = "=1.18.1", optional = true, default-features = false, features = ["std", "compat-1-18", "backend-winit", "renderer-femtovg", "renderer-software", "accessibility"] }
+earshot = "1.2.2"
+cpal = "0.17"
+
+[build-dependencies]
+slint-build = { version = "=1.18.1", optional = true }
+serde_json = "1"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Storage_FileSystem", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Threading"] }

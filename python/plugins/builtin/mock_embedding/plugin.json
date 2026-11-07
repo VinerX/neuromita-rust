@@ -1,0 +1,1 @@
+{"id":"mock_embedding","name":"Mock Embedding","version":"0.1.0","kind":"embedding","entrypoint":"plugin.py","api_version":1}

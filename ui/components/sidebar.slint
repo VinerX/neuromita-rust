@@ -1,0 +1,101 @@
+import { Theme, Icons } from "../theme.slint";
+import { Label, Icon, ActionSurface, IconButton } from "controls.slint";
+import { I18n } from "../i18n.slint";
+import { LanguageMenu } from "language-menu.slint";
+
+export enum PageId { home, settings, sandbox, releases, gallery, wiki, logs, about }
+
+export component Sidebar inherits Rectangle {
+    in property <PageId> current-page: home;
+    in property <string> version;
+    callback navigate(PageId);
+    callback language-selected(string);
+    callback reload-translations();
+    callback social-selected(string);
+    width: Theme.sidebar-width;
+    background: Theme.sidebar;
+    VerticalLayout {
+        padding-left: 13px; padding-right: 13px;
+        padding-top: 20px; padding-bottom: 18px; spacing: 12px;
+        HorizontalLayout {
+            height: 52px; padding: 0px; padding-left: 8px; padding-right: 8px; spacing: 12px;
+            VerticalLayout {
+                width: 44px; padding: 0px; alignment: center;
+                Image { width: 44px; height: 44px; source: @image-url("../../assets/launcher_ui/NM_Logo.png"); image-fit: contain; image-rendering: smooth; }
+            }
+            VerticalLayout {
+                padding: 0px; spacing: 0px; alignment: center;
+                Label { height: 23px; text: "NeuroMita"; font-size: 16px; font-weight: 700; }
+                Label { height: 20px; text: I18n.i18n("brand.subtitle", "Лаунчер"); color: Theme.muted; }
+            }
+        }
+        Rectangle { height: 1px; background: Theme.divider; }
+        VerticalLayout {
+            padding: 0px; padding-top: 6px; padding-bottom: 6px;
+            spacing: Theme.navigation-spacing;
+            for item in [
+                { page: PageId.home, label: I18n.i18n("navigation.home", "Главная"), icon: Icons.home },
+                { page: PageId.settings, label: I18n.i18n("navigation.settings", "Настройки"), icon: Icons.settings },
+                { page: PageId.sandbox, label: I18n.i18n("navigation.sandbox", "Песочница"), icon: Icons.sandbox },
+                { page: PageId.releases, label: I18n.i18n("navigation.releases", "Релизы"), icon: Icons.releases },
+                { page: PageId.gallery, label: I18n.i18n("navigation.gallery", "Галерея"), icon: Icons.gallery },
+                { page: PageId.wiki, label: I18n.i18n("navigation.wiki", "Вики"), icon: Icons.wiki },
+                { page: PageId.logs, label: I18n.i18n("navigation.logs", "Логи"), icon: Icons.logs },
+                { page: PageId.about, label: I18n.i18n("navigation.about", "О приложении"), icon: Icons.about }
+            ]: ActionSurface {
+                height: Theme.navigation-height; label: item.label;
+                selected: root.current-page == item.page;
+                border-radius: 16px;
+                activated => { root.navigate(item.page); }
+                HorizontalLayout {
+                    padding-left: 15px; padding-right: 12px; spacing: 4px;
+                    VerticalLayout { width: 16px; padding: 0px; alignment: center; Icon { source: item.icon; } }
+                    Label { text: item.label; color: root.current-page == item.page ? Theme.text : Theme.muted; font-size: Theme.navigation-size; font-weight: 600; min-width: 0px; }
+                }
+            }
+        }
+        Rectangle { vertical-stretch: 1; }
+        VerticalLayout {
+            padding: 0px; padding-left: 2px; padding-right: 2px; spacing: 6px;
+            Label { height: 16px; text: I18n.i18n("footer.social", "СОЦ. СЕТИ"); font-size: 10px; font-weight: 700; color: Theme.accent-hover; }
+            Rectangle {
+                height: 61px; background: #ffffff05; border-width: 1px; border-color: #ffffff1a; border-radius: 16px;
+                HorizontalLayout {
+                    padding: 12px; spacing: 10px; alignment: center;
+                    for item in [
+                        { name: "Discord", icon: Icons.discord }, { name: "GitHub", icon: Icons.github },
+                        { name: "YouTube", icon: Icons.youtube }, { name: "Boosty", icon: Icons.boosty }
+                    ]: IconButton {
+                        icon: item.icon; label: item.name;
+                        activated => { root.social-selected(item.name); }
+                    }
+                }
+            }
+        }
+        HorizontalLayout {
+            height: 26px; padding: 0px; spacing: 6px;
+            for lang in [{ code: "en", label: "EN" }, { code: "ru", label: "RU" }]: ActionSurface {
+                width: 34px; label: lang.label;
+                selected: I18n.locale == lang.code; border-radius: 13px;
+                background: self.selected ? Theme.accent : #ffffff0d;
+                border-width: self.selected ? 0px : 1px; border-color: Theme.border;
+                Label { text: lang.label; horizontal-alignment: center; font-size: 12px; font-weight: 700; color: parent.selected ? white : Theme.muted; }
+                activated => { root.language-selected(lang.code); }
+            }
+            ActionSurface {
+                width: 26px; label: I18n.i18n("localization.language-settings", "Настройки языка");
+                Icon { source: Icons.globe; colorize: #8b8b9c; width: 14px; height: 14px; }
+                language-menu := LanguageMenu {
+                    x: 0px; y: -self.height - 8px;
+                    selected(code) => { root.language-selected(code); }
+                    reload => { root.reload-translations(); }
+                }
+                activated => { language-menu.show(); }
+            }
+            Label { text: root.version; color: Theme.muted; horizontal-alignment: right; font-size: 10px; min-width: 0px; }
+        }
+    }
+    HorizontalLayout { padding: 0px; alignment: end;
+        Rectangle { width: 1px; background: #ffffff0f; }
+    }
+}

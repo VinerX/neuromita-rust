@@ -1,0 +1,102 @@
+import { SettingsSectionHeading, SettingsToggleRow, SettingsNumberRow, SettingsChoiceRow, SettingsButtonRow, SettingsText } from "../components/settings-kit.slint";
+import { CollapsibleSettingsSection, InnerSettingsSection } from "../components/collapsible-section.slint";
+import { SettingsScrollView } from "scroll-view.slint";
+import { SettingsTheme } from "theme.slint";
+import { I18n } from "../i18n.slint";
+
+export component GameSettingsPage inherits SettingsScrollView {
+    in-out property <bool> mod-open;
+    in-out property <bool> dialogues-open;
+    in-out property <bool> games-open;
+    in-out property <bool> beat-open;
+    in-out property <bool> auto-dialogues-open;
+    in-out property <bool> continuations-open;
+    in-out property <bool> manual-games-open;
+    in-out property <bool> beat-management-open;
+    in-out property <bool> beat-cache-open;
+    in-out property <bool> ignore-requests;
+    in-out property <bool> world-tree;
+    in-out property <string> block-level: "Idle events";
+    in-out property <bool> auto-dialogues: true;
+    in-out property <int> minimum-rounds: 1;
+    in-out property <int> maximum-chain-turns: 24;
+    in-out property <int> maximum-continuations: 3;
+    in-out property <bool> games-enabled;
+    in-out property <bool> games-with-unity;
+    in-out property <bool> chess-enabled;
+    in-out property <bool> sea-battle-enabled;
+    in-out property <bool> beat-enabled;
+    in-out property <string> beat-backend: "Auto";
+    content-height: content.preferred-height;
+
+    content := VerticalLayout {
+        width: root.visible-width; padding: 2px; padding-right: 2px;
+        spacing: SettingsTheme.section-gap; alignment: start;
+
+        CollapsibleSettingsSection {
+            title: I18n.i18n("settings.game.mod", "Настройки мода");
+            subtitle: I18n.i18n("settings.game.mod.desc", "Внутриигровые меню мода и обработка запросов из игры.");
+            glyph: "\u{f0b0}";
+            expanded <=> root.mod-open;
+            SettingsToggleRow { title: I18n.i18n("settings.game.world-tree", "Дерево иерархии мира (устарело)"); checked: root.world-tree; changed(value) => { root.world-tree = value; } }
+            SettingsToggleRow { title: I18n.i18n("settings.game.ignore", "Игнорировать запросы"); checked: root.ignore-requests; changed(value) => { root.ignore-requests = value; } }
+            if root.ignore-requests: SettingsChoiceRow {
+                title: I18n.i18n("settings.game.block", "Уровень блокировки");
+                value: root.block-level; options: ["Idle events", "All events"];
+                changed(value) => { root.block-level = value; }
+            }
+        }
+        CollapsibleSettingsSection {
+            title: I18n.i18n("settings.game.dialogues", "Диалоги");
+            subtitle: I18n.i18n("settings.game.dialogues.desc", "Автоматические разговоры персонажей и продолжения.");
+            glyph: "\u{f086}";
+            expanded <=> root.dialogues-open;
+            InnerSettingsSection {
+                title: I18n.i18n("settings.game.auto-dialogues", "Автоматические диалоги");
+                expanded <=> root.auto-dialogues-open;
+                SettingsToggleRow { title: I18n.i18n("settings.game.auto", "Автодиалоги между персонажами"); checked: root.auto-dialogues; changed(value) => { root.auto-dialogues = value; } }
+                SettingsNumberRow { title: I18n.i18n("settings.game.min-rounds", "Минимум кругов разговора (1–24)"); value: root.minimum-rounds; minimum: 1; maximum: 24; active: root.auto-dialogues; changed(value) => { root.minimum-rounds = value; } }
+                SettingsNumberRow { title: I18n.i18n("settings.game.max-chain", "Предельное число ходов в цепочке (1–200)"); value: root.maximum-chain-turns; minimum: 1; maximum: 200; active: root.auto-dialogues; changed(value) => { root.maximum-chain-turns = value; } }
+            }
+            InnerSettingsSection {
+                title: I18n.i18n("settings.game.continuations", "Продолжения");
+                expanded <=> root.continuations-open;
+                SettingsNumberRow { title: I18n.i18n("settings.game.max-continues", "Максимум продолжений одной Миты (0–12)"); value: root.maximum-continuations; minimum: 0; maximum: 12; changed(value) => { root.maximum-continuations = value; } }
+            }
+        }
+        CollapsibleSettingsSection {
+            title: I18n.i18n("settings.game.minigames", "Игры");
+            subtitle: I18n.i18n("settings.game.minigames.desc", "Включение и выбор доступных мини-игр с Митой.");
+            glyph: "\u{f11b}";
+            expanded <=> root.games-open;
+            SettingsToggleRow { title: I18n.i18n("settings.game.enable", "Включить игры"); checked: root.games-enabled; changed(value) => { root.games-enabled = value; } }
+            SettingsToggleRow { title: I18n.i18n("settings.game.allow-unity", "Разрешить запуск игр при подключенном Unity"); active: root.games-enabled; checked: root.games-with-unity; changed(value) => { root.games-with-unity = value; } }
+            SettingsToggleRow { title: I18n.i18n("settings.game.chess", "Шахматы"); active: root.games-enabled; checked: root.chess-enabled; changed(value) => { root.chess-enabled = value; } }
+            SettingsToggleRow { title: I18n.i18n("settings.game.sea", "Морской бой"); active: root.games-enabled; checked: root.sea-battle-enabled; changed(value) => { root.sea-battle-enabled = value; } }
+            InnerSettingsSection {
+                title: I18n.i18n("settings.game.manual", "Ручной запуск");
+                expanded <=> root.manual-games-open;
+                SettingsButtonRow { title: I18n.i18n("settings.game.launch-chess", "Запустить шахматы"); button-text: I18n.i18n("settings.game.start", "Запустить"); active: false; }
+                SettingsButtonRow { title: I18n.i18n("settings.game.launch-sea", "Запустить морской бой"); button-text: I18n.i18n("settings.game.start", "Запустить"); active: false; }
+            }
+        }
+        CollapsibleSettingsSection {
+            title: I18n.i18n("settings.game.beat", "Бит-синхронизация (Beat This)");
+            subtitle: I18n.i18n("settings.game.beat.desc", "Синхронизация покачивания головы Миты с битами музыки.");
+            glyph: "\u{f001}";
+            expanded <=> root.beat-open;
+            SettingsToggleRow { title: I18n.i18n("settings.game.beat-head", "Синхронизация покачивания от бита"); checked: root.beat-enabled; changed(value) => { root.beat-enabled = value; } }
+            SettingsChoiceRow { title: I18n.i18n("settings.game.beat-backend", "Режим обработки"); value: root.beat-backend; options: ["Auto"]; active: false; }
+            SettingsText { text: I18n.i18n("settings.game.beat-status", "Статус и размер кеша будут доступны после подключения Beat presenter."); color: SettingsTheme.muted; wrap: word-wrap; }
+            InnerSettingsSection {
+                title: I18n.i18n("settings.game.beat-management", "Управление"); expanded <=> root.beat-management-open;
+                SettingsButtonRow { title: "AI Hub"; button-text: I18n.i18n("settings.game.open", "Открыть"); active: false; }
+            }
+            InnerSettingsSection {
+                title: I18n.i18n("settings.game.beat-cache", "Кеш"); expanded <=> root.beat-cache-open;
+                SettingsButtonRow { title: I18n.i18n("settings.game.beat-cache-open", "Открыть папку кеша"); button-text: I18n.i18n("settings.game.open", "Открыть"); active: false; }
+                SettingsButtonRow { title: I18n.i18n("settings.game.beat-cache-rebuild", "Переиндексировать кеш"); button-text: I18n.i18n("settings.game.rebuild", "Переиндексировать"); active: false; }
+            }
+        }
+    }
+}

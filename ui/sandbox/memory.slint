@@ -1,0 +1,143 @@
+import { ScrollView } from "std-widgets.slint";
+import { Caption, HeaderButton, QuickAction, Field, Centered } from "controls.slint";
+import { SandboxTheme } from "theme.slint";
+import { I18n } from "../i18n.slint";
+
+export struct MemoryItem { id: string, text: string, state: int, priority: int, protected: bool }
+export global MemoryUi {
+    in-out property <bool> open;
+    in-out property <bool> editing;
+    in-out property <int> offset;
+    in-out property <int> next: -1;
+    in-out property <string> search;
+    callback page(int, string);
+    in-out property <int> character;
+    in-out property <[MemoryItem]> items;
+    in-out property <string> active;
+    in-out property <string> forgotten;
+    in-out property <string> deleted;
+    in-out property <string> total;
+    in-out property <string> edit-id;
+    in-out property <string> content;
+    in-out property <string> error;
+    in-out property <bool> delete-confirm;
+    callback select(int);
+    callback edit(string);
+    callback apply(int);
+}
+
+export component MemoryPanel inherits Rectangle {
+    background: #0a0a18;
+    border-width: 1px;
+    border-color: SandboxTheme.border;
+    border-radius: 10px;
+    height: 548px;
+    VerticalLayout {
+        padding: 14px;
+        spacing: 12px;
+        HorizontalLayout {
+            height: 25px;
+            Caption { text: I18n.i18n("sandbox.state.memory", "Контекст и память"); font-size: 15px; font-weight: 700; horizontal-stretch: 1; }
+            Caption { text: MemoryUi.total; color: SandboxTheme.muted; }
+        }
+        Caption {
+            text: I18n.i18n("memory.summary", "Активных / забытых / удалённых") + ": " + MemoryUi.active + " / " + MemoryUi.forgotten + " / " + MemoryUi.deleted;
+            color: SandboxTheme.muted;
+        }
+        if MemoryUi.error != "": Text {
+            text: MemoryUi.error; color: #ff8bb3;
+            font-family: SandboxTheme.font-family; font-size: 12px; wrap: word-wrap;
+        }
+        Caption { text: I18n.i18n("memory.page", "Записей на странице: до 50. Всего") + " " + MemoryUi.total; color: SandboxTheme.muted; }
+        HorizontalLayout {
+            spacing: 14px;
+            VerticalLayout {
+                width: 290px;
+                spacing: 8px;
+                HorizontalLayout {
+                    height: 38px; spacing: 6px;
+                    Field { text <=> MemoryUi.search; placeholder: I18n.i18n("memory.search", "Найти"); horizontal-stretch: 1; }
+                    HeaderButton { text: I18n.i18n("memory.search", "Найти"); activated => { MemoryUi.page(0, MemoryUi.search); } }
+                }
+                QuickAction {
+                    text: I18n.i18n("memory.add", "Добавить воспоминание");
+                    activated => { MemoryUi.edit(""); MemoryUi.delete-confirm = false; }
+                }
+                ScrollView {
+                    content-width: self.visible-width;
+                    vertical-stretch: 1;
+                    VerticalLayout {
+                        padding: 0px; padding-right: 8px; spacing: 6px; alignment: start;
+                        for item in MemoryUi.items: Rectangle {
+                            background: MemoryUi.edit-id == item.id ? #b74b7d33 : #080912;
+                            border-radius: 8px; border-width: 1px; border-color: SandboxTheme.border;
+                            min-height: 61px;
+                            VerticalLayout {
+                                padding: 9px; spacing: 4px;
+                                Caption {
+                                    text: (item.state == 0 ? I18n.i18n("memory.active", "Активно") : item.state == 1 ? I18n.i18n("memory.forgotten", "Забыто") : I18n.i18n("memory.deleted", "Удалено")) + " · " + (item.priority == 0 ? I18n.i18n("memory.priority.low", "Низкий") : item.priority == 1 ? I18n.i18n("memory.priority.normal", "Обычный") : item.priority == 2 ? I18n.i18n("memory.priority.high", "Высокий") : I18n.i18n("memory.priority.critical", "Критический")) + (item.protected ? " · " + I18n.i18n("memory.protected", "Защищено") : "");
+                                    font-size: 10px; color: SandboxTheme.muted;
+                                }
+                                Text { text: item.text; color: SandboxTheme.text; font-family: SandboxTheme.font-family; font-size: 12px; wrap: word-wrap; }
+                            }
+                            TouchArea { mouse-cursor: pointer; clicked => { MemoryUi.edit(item.id); MemoryUi.delete-confirm = false; } }
+                        }
+                    }
+                }
+                HorizontalLayout {
+                    height: 36px; spacing: 8px;
+                    HeaderButton {
+                        text: I18n.i18n("memory.previous", "Назад");
+                        enabled: MemoryUi.offset > 0;
+                        activated => { MemoryUi.page(max(0, MemoryUi.offset - 50), MemoryUi.search); }
+                    }
+                    HeaderButton {
+                        text: I18n.i18n("memory.next", "Далее");
+                        enabled: MemoryUi.next >= 0;
+                        activated => { MemoryUi.page(MemoryUi.next, MemoryUi.search); }
+                    }
+                }
+            }
+            VerticalLayout {
+                horizontal-stretch: 1; spacing: 8px;
+                Caption { text: I18n.i18n("memory.content", "Содержимое воспоминания"); font-weight: 700; }
+                Rectangle {
+                    background: SandboxTheme.input; border-radius: 8px;
+                    border-width: 1px; border-color: SandboxTheme.border;
+                    min-height: 112px; vertical-stretch: 1;
+                    HorizontalLayout { padding: 10px;
+                        ScrollView {
+                            content-width: self.visible-width;
+                            TextInput {
+                                enabled: MemoryUi.editing;
+                                text <=> MemoryUi.content;
+                                color: SandboxTheme.text; font-family: SandboxTheme.font-family;
+                                font-size: 12px; wrap: word-wrap; single-line: false;
+                            }
+                        }
+                    }
+                }
+                QuickAction {
+                    text: I18n.i18n("settings.save", "Сохранить");
+                    enabled: MemoryUi.editing;
+                    activated => { MemoryUi.apply(0); }
+                }
+                if MemoryUi.edit-id != "": VerticalLayout {
+                    spacing: 6px;
+                    HorizontalLayout {
+                        spacing: 8px;
+                        QuickAction { text: I18n.i18n("memory.forget", "Забыть"); enabled: MemoryUi.editing; activated => { MemoryUi.apply(1); } }
+                        QuickAction { text: I18n.i18n("memory.restore", "Восстановить"); enabled: MemoryUi.editing; activated => { MemoryUi.apply(3); } }
+                    }
+                    QuickAction { text: I18n.i18n("memory.protect", "Переключить защиту"); enabled: MemoryUi.editing; activated => { MemoryUi.apply(4); } }
+                    QuickAction { text: I18n.i18n("settings.delete", "Удалить"); enabled: MemoryUi.editing; activated => { MemoryUi.delete-confirm = true; } }
+                    if MemoryUi.delete-confirm: QuickAction {
+                        text: I18n.i18n("memory.delete.confirm", "Подтвердить перенос в корзину");
+                        enabled: MemoryUi.editing;
+                        activated => { MemoryUi.apply(2); MemoryUi.delete-confirm = false; }
+                    }
+                }
+            }
+        }
+    }
+}

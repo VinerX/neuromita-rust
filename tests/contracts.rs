@@ -11,7 +11,7 @@ use std::{
 use neuromita::{
     api::{CharacterApi, ChatApi},
     app::{ApplicationConfig, ApplicationLifecycle, RuntimeLimits},
-    character::{CharacterContext, CharacterId},
+    character::CharacterId,
     generation::{
         GenerationError, GenerationPreset, GenerationProvider, ProviderFuture, ProviderKind,
         ProviderTemplate, ResponseGenerator,
@@ -39,7 +39,7 @@ use tokio::{
 use uuid::Uuid;
 
 struct GenerationCall {
-    context: CharacterContext,
+    context: neuromita::generation::GenerationInput,
     reply: oneshot::Sender<Result<Arc<str>, GenerationError>>,
 }
 struct ControlledGeneration(mpsc::UnboundedSender<GenerationCall>);
@@ -49,7 +49,7 @@ impl GenerationProvider for ControlledGeneration {
     }
     fn generate(
         &self,
-        context: CharacterContext,
+        context: neuromita::generation::GenerationInput,
         _template: ProviderTemplate,
     ) -> ProviderFuture<'_> {
         Box::pin(async move {
@@ -60,6 +60,7 @@ impl GenerationProvider for ControlledGeneration {
             receive
                 .await
                 .map_err(|_| GenerationError::Transport("fixture response dropped".into()))?
+                .map(|text| neuromita::generation::StructuredResponse::spoken(text.to_string()))
         })
     }
 }
@@ -92,6 +93,9 @@ struct Storage {
     fail: AtomicBool,
 }
 impl SettingsRepository for Storage {
+    fn migrate(&self) -> Result<(), SettingsError> {
+        self.json.migrate()
+    }
     fn load(&self) -> Result<StoredSettings, SettingsError> {
         self.json.load()
     }
@@ -107,6 +111,15 @@ impl Drop for TestFile {
     fn drop(&mut self) {
         let _ = std::fs::remove_file(&self.0);
     }
+}
+
+fn sample_network_reply() -> serde_json::Value {
+    let message_id = ChatApi::publish_message(
+        CharacterId::Crazy,
+        UserInput::new("test".to_owned()).unwrap(),
+    )
+    .unwrap();
+    json!({"command_id":Uuid::new_v4(),"command":"reply","character":"Crazy","message_id":message_id.0})
 }
 
 async fn next<T>(receive: &mut mpsc::UnboundedReceiver<T>) -> T {
@@ -210,7 +223,6 @@ async fn complete_minimal_contracts() {
     assert!(ApplicationLifecycle::start(invalid).await.is_err());
     storage
         .save(&StoredSettings {
-            schema_version: 1,
             revision: 7,
             settings: AppSettings::initial_profile(),
         })
@@ -232,6 +244,27 @@ async fn complete_minimal_contracts() {
         7
     );
     let presenter = app.presenter();
+    std::thread::scope(|scope| {
+        for area in neuromita::settings::SettingsArea::ALL {
+            let interface = &presenter.settings.interface;
+            scope.spawn(move || interface.set_visible(area, false).unwrap());
+        }
+    });
+    let preferences = SettingsApi::snapshot::<neuromita::settings::InterfaceSettings>().unwrap();
+    for area in neuromita::settings::SettingsArea::ALL {
+        assert!(!preferences.value.visibility.is_visible(area));
+        presenter
+            .settings
+            .interface
+            .set_visible(area, true)
+            .unwrap();
+    }
+    let mut incomplete = serde_json::to_value(&preferences.value).unwrap();
+    incomplete["visibility"]
+        .as_object_mut()
+        .unwrap()
+        .remove("characters");
+    assert!(serde_json::from_value::<neuromita::settings::InterfaceSettings>(incomplete).is_err());
 
     let mut volume = presenter.settings.voice.volume.observe();
     assert_eq!(volume.next().await.unwrap().get(), 80);
@@ -292,7 +325,7 @@ async fn complete_minimal_contracts() {
     let observation = presenter
         .characters
         .observe(
-            CharacterId::Mita,
+            CharacterId::Crazy,
             UserInput::new("the lamp is blue".into()).unwrap(),
         )
         .await
@@ -300,7 +333,7 @@ async fn complete_minimal_contracts() {
     let observed_at = app.at_event(observation).unwrap();
     let reaction = presenter
         .chat
-        .react(CharacterId::Mita, observation, "react to the lamp".into())
+        .react(CharacterId::Crazy, observation, "react to the lamp".into())
         .unwrap();
     let call = next(&mut generations).await;
     assert!(
@@ -318,7 +351,7 @@ async fn complete_minimal_contracts() {
     assert!(
         presenter
             .characters
-            .context(CharacterId::Mita, origin)
+            .context(CharacterId::Crazy, origin)
             .await
             .unwrap()
             .history
@@ -327,7 +360,7 @@ async fn complete_minimal_contracts() {
     );
     let old = presenter
         .characters
-        .context(CharacterId::Mita, observed_at)
+        .context(CharacterId::Crazy, observed_at)
         .await
         .unwrap();
     assert_eq!(old.state.accepted_replies, 0);
@@ -335,7 +368,7 @@ async fn complete_minimal_contracts() {
     assert!(
         presenter
             .characters
-            .context(CharacterId::KindMita, observed_at)
+            .context(CharacterId::Kind, observed_at)
             .await
             .unwrap()
             .history
@@ -343,19 +376,19 @@ async fn complete_minimal_contracts() {
             .is_empty()
     );
 
-    let unknown = presenter
-        .chat
-        .react(CharacterId::KindMita, observation, "unknown".into())
-        .unwrap();
     assert!(matches!(
-        done(&unknown).await.state,
-        RequestState::Finished(RequestOutcome::InternalError(_))
+        presenter
+            .chat
+            .react(CharacterId::Kind, observation, "unknown".into()),
+        Err(neuromita::presentation::PresenterError::Submit(
+            neuromita::request::SubmitError::InvalidTargetEvent
+        ))
     ));
     assert!(generations.try_recv().is_err());
 
     let empty = presenter
         .chat
-        .reply(CharacterId::Mita, "provider returns empty text".into())
+        .reply(CharacterId::Crazy, "provider returns empty text".into())
         .unwrap();
     next(&mut generations)
         .await
@@ -369,7 +402,7 @@ async fn complete_minimal_contracts() {
 
     let initiative = presenter
         .chat
-        .initiate(CharacterId::KindMita, "say hello".into())
+        .initiate(CharacterId::Kind, "say hello".into())
         .unwrap();
     let call = next(&mut generations).await;
     assert!(call.context.history.events.is_empty());
@@ -382,22 +415,20 @@ async fn complete_minimal_contracts() {
     let historical = presenter
         .chat
         .reply_at(
-            CharacterId::Mita,
+            CharacterId::Crazy,
             "historical request".into(),
             ContextPosition::At(origin),
         )
         .unwrap();
-    let call = next(&mut generations).await;
-    assert!(call.context.history.events.is_empty());
-    assert_eq!(call.context.state.accepted_replies, 0);
-    call.reply.send(Ok(Arc::from("historical answer"))).unwrap();
-    assert!(
-        matches!(&done(&historical).await.state, RequestState::Finished(RequestOutcome::InternalError(failure)) if failure.partial_text.as_deref() == Some("historical answer"))
-    );
+    assert!(matches!(
+        &done(&historical).await.state,
+        RequestState::Finished(RequestOutcome::InternalError(_))
+    ));
+    assert!(generations.try_recv().is_err());
     assert_eq!(
         presenter
             .characters
-            .state(CharacterId::Mita)
+            .state(CharacterId::Crazy)
             .await
             .unwrap()
             .accepted_replies,
@@ -407,7 +438,7 @@ async fn complete_minimal_contracts() {
     presenter.settings.voice.in_launcher.set(true).unwrap();
     let speaking = presenter
         .chat
-        .reply(CharacterId::Mita, "with voice".into())
+        .reply(CharacterId::Crazy, "with voice".into())
         .unwrap();
     next(&mut generations)
         .await
@@ -421,10 +452,32 @@ async fn complete_minimal_contracts() {
         speaking.snapshot().state,
         RequestState::Processing(neuromita::request::ProcessingStage::GeneratingVoice { .. })
     ));
+    let preliminary = speaking.snapshot();
+    assert_eq!(preliminary.provisional_text(), Some("spoken answer"));
+    assert!(preliminary.can_cancel());
+    let network_projection = neuromita::server::status(&preliminary);
+    assert_eq!(network_projection["stage"], "voice");
+    assert_eq!(network_projection["text"], "spoken answer");
+    assert_eq!(network_projection["provisional"], true);
+    assert_eq!(network_projection["can_cancel"], true);
+    timeout(Duration::from_secs(5), async {
+        let mut observer = presenter.chat.observe();
+        loop {
+            if observer.borrow_and_update().requests.iter().any(|row| {
+                row.metadata.id == speaking.id()
+                    && row.snapshot.provisional_text() == Some("spoken answer")
+            }) {
+                break;
+            }
+            observer.changed().await.unwrap();
+        }
+    })
+    .await
+    .unwrap();
     assert_eq!(
         presenter
             .characters
-            .state(CharacterId::Mita)
+            .state(CharacterId::Crazy)
             .await
             .unwrap()
             .accepted_replies,
@@ -438,13 +491,15 @@ async fn complete_minimal_contracts() {
         }))
         .unwrap();
     let response = done(&speaking).await;
+    assert_eq!(response.provisional_text(), None);
+    assert!(!response.can_cancel());
     assert!(
         matches!(&response.state, RequestState::Finished(RequestOutcome::Success(response)) if response.audio.is_some())
     );
 
     let partial = presenter
         .chat
-        .reply(CharacterId::Mita, "voice fails".into())
+        .reply(CharacterId::Crazy, "voice fails".into())
         .unwrap();
     next(&mut generations)
         .await
@@ -462,33 +517,33 @@ async fn complete_minimal_contracts() {
     assert_eq!(
         presenter
             .characters
-            .state(CharacterId::Mita)
+            .state(CharacterId::Crazy)
             .await
             .unwrap()
             .accepted_replies,
         3
     );
 
-    let cancelled = presenter
+    let committed = presenter
         .chat
-        .reply(CharacterId::Mita, "cancel voice".into())
+        .reply(CharacterId::Crazy, "cancel voice".into())
         .unwrap();
     next(&mut generations)
         .await
         .reply
-        .send(Ok(Arc::from("not accepted")))
+        .send(Ok(Arc::from("already accepted")))
         .unwrap();
     let speech = next(&mut voices).await;
-    assert_eq!(cancelled.cancel(), CancelResult::Requested);
+    assert_eq!(committed.cancel(), CancelResult::Requested);
+
     assert!(matches!(
-        done(&cancelled).await.state,
+        done(&committed).await.state,
         RequestState::Cancelled
     ));
-    drop(speech);
     assert_eq!(
         presenter
             .characters
-            .state(CharacterId::Mita)
+            .state(CharacterId::Crazy)
             .await
             .unwrap()
             .accepted_replies,
@@ -497,13 +552,33 @@ async fn complete_minimal_contracts() {
     assert!(
         !app.timeline()
             .iter()
-            .any(|event| event.request_id == Some(cancelled.id())
+            .any(|event| event.request_id == Some(committed.id())
                 && matches!(event.content, EventContent::CharacterReply { .. }))
     );
-    let trace = ChatApi::trace(cancelled.id()).unwrap().unwrap();
-    assert_eq!(trace.generated_text.as_deref(), Some("not accepted"));
+    assert!(speech.reply.is_closed());
+    let trace = ChatApi::trace(committed.id()).unwrap().unwrap();
+    assert_eq!(trace.generated_text.as_deref(), Some("already accepted"));
     assert!(trace.context.is_some());
     assert!(!trace.preset_description.contains("fixture-secret-key"));
+    assert!(
+        trace
+            .transitions
+            .iter()
+            .any(|change| change.phase == EffectPhase::Discarded)
+    );
+
+    let cancelled = presenter
+        .chat
+        .reply(CharacterId::Crazy, "cancel before LLM".into())
+        .unwrap();
+    let generation = next(&mut generations).await;
+    assert_eq!(cancelled.cancel(), CancelResult::Requested);
+    assert!(matches!(
+        done(&cancelled).await.state,
+        RequestState::Cancelled
+    ));
+    drop(generation);
+    let trace = ChatApi::trace(cancelled.id()).unwrap().unwrap();
     assert!(
         trace
             .transitions
@@ -526,7 +601,7 @@ async fn complete_minimal_contracts() {
     presenter.settings.voice.voice.set("panic".into()).unwrap();
     let voice_panic = presenter
         .chat
-        .reply(CharacterId::Mita, "unexpected voice failure".into())
+        .reply(CharacterId::Crazy, "unexpected voice failure".into())
         .unwrap();
     next(&mut generations)
         .await
@@ -534,16 +609,16 @@ async fn complete_minimal_contracts() {
         .send(Ok(Arc::from("retained partial")))
         .unwrap();
     assert!(
-        matches!(&done(&voice_panic).await.state, RequestState::Finished(RequestOutcome::InternalError(failure)) if failure.partial_text.as_deref() == Some("retained partial"))
+        matches!(&done(&voice_panic).await.state, RequestState::Finished(RequestOutcome::VoiceGenerationFailed { response, .. }) if response.text.as_ref() == "retained partial")
     );
     assert_eq!(
         presenter
             .characters
-            .state(CharacterId::Mita)
+            .state(CharacterId::Crazy)
             .await
             .unwrap()
             .accepted_replies,
-        3
+        4
     );
     presenter
         .settings
@@ -558,11 +633,14 @@ async fn complete_minimal_contracts() {
     let mut reader = BufReader::new(read);
     frame(&mut reader, |value| value["type"] == "connected").await;
     frame(&mut reader, |value| value["type"] == "settings").await;
-    write.write_all(b"test\n").await.unwrap();
+    write
+        .write_all(format!("{}\n", sample_network_reply()).as_bytes())
+        .await
+        .unwrap();
     let accepted = frame(&mut reader, |value| value["type"] == "accepted").await;
     let id = RequestId(Uuid::parse_str(accepted["request_id"].as_str().unwrap()).unwrap());
     let call = next(&mut generations).await;
-    assert_eq!(&*call.context.current_input, "test");
+    assert!(call.context.current_input.is_empty());
     shown(&presenter.chat, id, false).await;
     call.reply.send(Ok(Arc::from("network answer"))).unwrap();
     let completed = frame(&mut reader, |value| {
@@ -573,7 +651,11 @@ async fn complete_minimal_contracts() {
     shown(&presenter.chat, id, true).await;
 
     let command_id = Uuid::new_v4();
-    let command = format!("{}\n", json!({"command_id":command_id,"command":"test"}));
+    let command = format!("{}\n", {
+        let mut c = sample_network_reply();
+        c["command_id"] = json!(command_id);
+        c
+    });
     write.write_all(command.as_bytes()).await.unwrap();
     let original = frame(&mut reader, |value| value["type"] == "accepted").await;
     let call = next(&mut generations).await;
@@ -603,10 +685,7 @@ async fn complete_minimal_contracts() {
         55
     );
 
-    let command = format!(
-        "{}\n",
-        json!({"command_id":Uuid::new_v4(),"command":"test"})
-    );
+    let command = format!("{}\n", sample_network_reply());
     let split = command.len() / 2;
     write.write_all(&command.as_bytes()[..split]).await.unwrap();
     presenter
@@ -631,6 +710,82 @@ async fn complete_minimal_contracts() {
     })
     .await;
 
+    SettingsApi::edit::<VoiceSettings>(|voice| voice.in_game = true).unwrap();
+    let before = presenter
+        .characters
+        .state(CharacterId::Crazy)
+        .await
+        .unwrap()
+        .accepted_replies;
+    write
+        .write_all(format!("{}\n", sample_network_reply()).as_bytes())
+        .await
+        .unwrap();
+    let accepted = frame(&mut reader, |value| value["type"] == "accepted").await;
+    let id = RequestId(Uuid::parse_str(accepted["request_id"].as_str().unwrap()).unwrap());
+    let network_request = ChatApi::active_request(id).unwrap().unwrap();
+    next(&mut generations)
+        .await
+        .reply
+        .send(Ok(Arc::from("provisional network answer")))
+        .unwrap();
+    let speech = next(&mut voices).await;
+    let provisional_frame = frame(&mut reader, |value| {
+        value["type"] == "request_status"
+            && value["request_id"] == id.0.to_string()
+            && value["stage"] == "voice"
+    })
+    .await;
+    assert_eq!(provisional_frame["text"], "provisional network answer");
+    assert_eq!(provisional_frame["provisional"], true);
+    assert_eq!(provisional_frame["can_cancel"], true);
+    assert_eq!(
+        network_request.snapshot().provisional_text(),
+        Some("provisional network answer")
+    );
+    shown(&presenter.chat, id, false).await;
+    let command = json!({"command_id":Uuid::new_v4(),"command":"cancel","request_id":id.0});
+    write
+        .write_all(format!("{command}\n").as_bytes())
+        .await
+        .unwrap();
+    let mut cancellation = None;
+    let mut cancelled_frame = None;
+    while cancellation.is_none() || cancelled_frame.is_none() {
+        let message = frame(&mut reader, |value| {
+            value["type"] == "cancel"
+                || (value["type"] == "request_status"
+                    && value["request_id"] == id.0.to_string()
+                    && value["state"] == "cancelled")
+        })
+        .await;
+        if message["type"] == "cancel" {
+            cancellation = Some(message);
+        } else {
+            cancelled_frame = Some(message);
+        }
+    }
+    assert_eq!(cancellation.unwrap()["result"], "Requested");
+    assert!(matches!(
+        done(&network_request).await.state,
+        RequestState::Cancelled
+    ));
+    let cancelled_frame = cancelled_frame.unwrap();
+    assert_eq!(cancelled_frame["can_cancel"], false);
+    assert!(cancelled_frame.get("provisional").is_none());
+    assert!(cancelled_frame.get("text").is_none());
+    shown(&presenter.chat, id, true).await;
+    assert!(speech.reply.is_closed());
+    assert_eq!(
+        presenter
+            .characters
+            .state(CharacterId::Crazy)
+            .await
+            .unwrap()
+            .accepted_replies,
+        before
+    );
+
     let address = app.server().address();
     let state = app.server().observe();
     SettingsApi::flush().await.unwrap();
@@ -643,7 +798,7 @@ async fn complete_minimal_contracts() {
         Err(SettingsError::Stopped)
     ));
     assert!(matches!(volume.next().await, Err(SettingsError::Stopped)));
-    assert!(CharacterApi::get(CharacterId::Mita).is_err());
+    assert!(CharacterApi::get(CharacterId::Crazy).is_err());
     assert_eq!(storage.load().unwrap().settings.voice.volume.get(), 56);
     drop(write);
 }

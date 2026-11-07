@@ -1,0 +1,273 @@
+import { SettingsTheme } from "../settings/theme.slint";
+import { SettingsText, SettingsGlyph, SettingsTextField } from "settings-kit.slint";
+import { ActionSurface } from "controls.slint";
+import { CharacterCatalog } from "../characters/catalog.slint";
+import { CharacterPortrait } from "../characters/portrait.slint";
+import { I18n } from "../i18n.slint";
+
+component VoiceTab inherits ActionSurface {
+    in property <bool> all-characters;
+    in property <int> character;
+    label: root.all-characters ? I18n.i18n("voice.api.default-voice", "Общий голос") : CharacterCatalog.name(CharacterCatalog.entries[root.character]);
+    width: 88px;
+    height: 76px;
+    horizontal-stretch: 0;
+    border-width: 0px;
+    border-radius: 16px;
+    background: transparent;
+
+    Rectangle {
+        x: 3px; y: 4px;
+        width: parent.width - 6px; height: parent.height - 8px;
+        border-radius: 16px;
+        background: root.selected ? transparent : root.hovered ? SettingsTheme.button-hover : SettingsTheme.field;
+        animate background { duration: 140ms; easing: ease-out; }
+    }
+
+    Rectangle {
+        property <length> portrait-size: root.selected ? 56px : root.hovered ? 52px : 50px;
+        width: self.portrait-size + 6px;
+        height: self.portrait-size + 6px;
+        x: (parent.width - self.width) / 2;
+        y: root.selected ? 3px : root.hovered ? 5px : 6px;
+        opacity: root.selected || root.hovered ? 1 : 0.82;
+        border-radius: self.width / 2;
+        background: transparent;
+        clip: true;
+        border-width: root.selected ? 1.5px : 0px;
+        border-color: SettingsTheme.accent;
+        animate width { duration: 230ms; easing: ease-out; }
+        animate height { duration: 230ms; easing: ease-out; }
+        animate y { duration: 230ms; easing: ease-out; }
+        animate border-width { duration: 230ms; easing: ease-out; }
+        if root.all-characters: SettingsGlyph {
+            width: 100%;
+            height: 100%;
+            text: "\u{f0c0}";
+            font-size: root.selected ? 34px : 30px;
+            color: SettingsTheme.muted;
+        }
+        if !root.all-characters: CharacterPortrait {
+            x: 3px;
+            y: 3px;
+            width: parent.width - 6px;
+            height: parent.height - 6px;
+            character: root.character;
+            surface: root.selected ? #171827 : SettingsTheme.field;
+        }
+    }
+}
+
+component VoiceScrollButton inherits ActionSurface {
+    in property <string> glyph;
+    width: 28px;
+    height: 32px;
+    label: glyph;
+    border-radius: 9px;
+    border-width: root.enabled ? 1px : 0px;
+    border-color: SettingsTheme.border;
+    background: root.enabled && self.hovered ? SettingsTheme.button-hover : transparent;
+    SettingsGlyph {
+        width: parent.width;
+        height: parent.height;
+        text: root.glyph;
+        font-size: 13px;
+        color: root.enabled ? SettingsTheme.text : SettingsTheme.muted;
+    }
+}
+
+export component CharacterVoiceTabs inherits VerticalLayout {
+    in property <int> selected;
+    in-out property <int> offset;
+    in-out property <string> voice-id;
+    callback changed-id(int, string);
+    callback changed-selection(int);
+    callback ensure-visible();
+    ensure-visible => {
+        if (root.selected < 0) {
+            root.offset = 0;
+        } else {
+            let left = (root.selected + 1) * 96px + 16px;
+            let right = left + 104px;
+            if (left < -viewport.content-x + 16px || right > -viewport.content-x + viewport.width) {
+                root.offset = root.selected + 1;
+            }
+        }
+    }
+    changed selected => { root.ensure-visible(); }
+    min-width: 0px;
+    preferred-width: 0px;
+    max-width: 100000px;
+    horizontal-stretch: 1;
+    padding: 0px;
+    spacing: 0px;
+
+    property <float> active-position: root.selected + 1;
+    animate active-position { duration: 230ms; easing: ease-out; }
+
+    SettingsText {
+        text: I18n.i18n("voice.api.characters", "Голоса персонажей");
+        height: 27px;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    chrome := Rectangle {
+        clip: true;
+        height: 207px;
+        min-width: 0px;
+        preferred-width: 0px;
+        max-width: 100000px;
+        horizontal-stretch: 1;
+        vertical-stretch: 0;
+        background: transparent;
+        property <bool> overflow: (CharacterCatalog.entries.length + 1) * 96px + 32px > self.width;
+        property <float> active-x: (16px + root.active-position * 96px + viewport.content-x) / 1px;
+        property <float> canvas-w: self.width / 1px;
+        property <float> canvas-h: self.height / 1px;
+
+        Path {
+            width: 100%;
+            height: 100%;
+            viewbox-width: chrome.canvas-w;
+            viewbox-height: chrome.canvas-h;
+            fill: @linear-gradient(0deg, #171827, #111321);
+            stroke: #55506560;
+            stroke-width: 1px;
+            commands: (parent.active-x <= 19
+                ? "M 1 100 V 82 Q " + parent.active-x + " 82 " + parent.active-x + " 66"
+                : "M 1 100 Q 1 82 19 82 H " + (parent.active-x - 16)
+                  + " Q " + parent.active-x + " 82 " + parent.active-x + " 66")
+                + " V 18 Q " + parent.active-x + " 2 " + (parent.active-x + 16) + " 2"
+                + " H " + (parent.active-x + 72)
+                + " Q " + (parent.active-x + 88) + " 2 " + (parent.active-x + 88) + " 18"
+                + " V 66 Q " + (parent.active-x + 88) + " 82 " + (parent.active-x + 104) + " 82"
+                + " H " + (parent.canvas-w - 19)
+                + " Q " + (parent.canvas-w - 1) + " 82 " + (parent.canvas-w - 1) + " 100"
+                + " V " + (parent.canvas-h - 19)
+                + " Q " + (parent.canvas-w - 1) + " " + (parent.canvas-h - 1) + " " + (parent.canvas-w - 19) + " " + (parent.canvas-h - 1)
+                + " H 19 Q 1 " + (parent.canvas-h - 1) + " 1 " + (parent.canvas-h - 19) + " Z";
+        }
+
+        VerticalLayout {
+            padding: 0px;
+            spacing: 0px;
+            HorizontalLayout {
+                height: 82px;
+                vertical-stretch: 0;
+                spacing: 0px;
+                Rectangle {
+                    clip: true;
+                    horizontal-stretch: 1;
+                    min-width: 0px;
+                    preferred-width: 0px;
+                    max-width: 100000px;
+                    height: 82px;
+                viewport := Flickable {
+                    width: 100%;
+                    changed width => { root.ensure-visible(); }
+                    height: 82px;
+                    content-width: (CharacterCatalog.entries.length + 1) * 96px + 32px;
+                    content-height: 82px;
+                    content-x: clamp(-root.offset * 96px, min(0px, self.width - self.content-width), 0px);
+                    mouse-drag-pan-enabled: false;
+                    animate content-x { duration: 180ms; easing: ease-out; }
+                    HorizontalLayout {
+                        width: viewport.content-width;
+                        height: 82px;
+                        padding-left: 16px;
+                        padding-right: 16px;
+                        padding-top: 6px;
+                        padding-bottom: 0px;
+                        spacing: 8px;
+                        VoiceTab {
+                            all-characters: true;
+                            selected: root.selected == -1;
+                            activated => { root.changed-selection(-1); root.offset = 0; }
+                        }
+                        for entry[index] in CharacterCatalog.entries: VoiceTab {
+                            character: entry.index;
+                            selected: root.selected == entry.index;
+                            activated => {
+                                root.changed-selection(entry.index);
+                                if (index + 1 < root.offset) { root.offset = index + 1; }
+                                if ((index + 2) * 96px + 16px > -viewport.content-x + viewport.width) {
+                                    root.offset = max(0, index - 2);
+                                }
+                            }
+                        }
+                    }
+                }
+                }
+                if chrome.overflow: VerticalLayout {
+                    width: 72px;
+                    height: 82px;
+                    padding-top: 2px; padding-bottom: 0px;
+                    padding-left: 0px; padding-right: 0px;
+                    spacing: 0px;
+                    alignment: center;
+                    HorizontalLayout {
+                    height: 32px;
+                    padding-left: 4px; padding-right: 4px;
+                    spacing: 4px;
+                    VoiceScrollButton {
+                        glyph: "\u{f053}";
+                        enabled: root.offset > 0;
+                        activated => { root.offset = max(0, root.offset - 2); }
+                    }
+                    VoiceScrollButton {
+                        glyph: "\u{f054}";
+                        enabled: -viewport.content-x + viewport.width < viewport.content-width - 1px;
+                        activated => { root.offset = min(CharacterCatalog.entries.length, root.offset + 2); }
+                    }
+                    }
+                }
+            }
+            VerticalLayout {
+                padding-left: 18px;
+                padding-right: 18px;
+                padding-top: 15px;
+                padding-bottom: 14px;
+                spacing: 8px;
+                SettingsText {
+                    text: root.selected == -1 ? I18n.i18n("voice.api.default-voice", "Общий голос") : root.selected >= 0 && root.selected < CharacterCatalog.entries.length ? CharacterCatalog.name(CharacterCatalog.entries[root.selected]) : I18n.i18n("voice.api.unknown", "Не выбран");
+                    font-weight: 700;
+                    font-size: 13px;
+                    height: 18px;
+                }
+                SettingsText {
+                    text: I18n.i18n("voice.api.voice-catalog", "Где искать голос? Каталог провайдера");
+                    font-size: 11px;
+                    height: 18px;
+                    color: SettingsTheme.accent;
+                }
+                HorizontalLayout {
+                    height: 38px;
+                    spacing: 8px;
+                    SettingsTextField {
+                        value <=> root.voice-id;
+                        placeholder: I18n.i18n("voice.api.voice-id", "Идентификатор голоса");
+                        horizontal-stretch: 1;
+                        accepted(value) => { root.changed-id(root.selected, value); }
+                    }
+                    ActionSurface {
+                        label: I18n.i18n("voice.api.voice-catalog", "Где искать голос? Каталог провайдера");
+                        width: 40px;
+                        height: 38px;
+                        enabled: false;
+                        background: SettingsTheme.button;
+                        border-width: 1px;
+                        border-color: SettingsTheme.border;
+                        border-radius: 10px;
+                        SettingsGlyph {
+                            text: "\u{f002}";
+                            width: 100%;
+                            height: 100%;
+                            color: SettingsTheme.muted;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

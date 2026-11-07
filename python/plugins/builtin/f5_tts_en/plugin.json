@@ -1,0 +1,8 @@
+{
+  "id": "f5_tts_en",
+  "name": "F5 Tts En",
+  "version": "0.1.0",
+  "kind": "tts",
+  "entrypoint": "plugin.py",
+  "api_version": 1
+}

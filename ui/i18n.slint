@@ -1,0 +1,12 @@
+export struct LocaleOption { code: string, name: string }
+
+export global I18n {
+    in property <string> locale;
+    in property <int> revision;
+    in property <[LocaleOption]> languages;
+    pure callback lookup(string, int, string, string) -> string;
+
+    public pure function i18n(id: string, source: string) -> string {
+        return lookup(locale, revision, id, source);
+    }
+}

@@ -1,0 +1,83 @@
+import { SettingsTheme } from "theme.slint";
+
+export component SettingsScrollView inherits Rectangle {
+    in property <length> content-height;
+    in-out property <length> content-y <=> viewport.content-y;
+    out property <length> visible-width: viewport.width;
+    out property <length> visible-height: root.height;
+    out property <bool> scrollable: root.scroll-limit > 0px;
+    property <length> scroll-limit: max(0px, root.content-height - root.height);
+    property <length> thumb-height: min(root.height, max(26px, root.height * root.height / max(1px, root.content-height)));
+    property <length> thumb-travel: root.height - root.thumb-height;
+    clip: true;
+    min-height: 0px;
+    min-width: 0px;
+    preferred-width: 0px;
+    horizontal-stretch: 1;
+    changed scroll-limit => { root.content-y = clamp(root.content-y, -root.scroll-limit, 0px); }
+
+    HorizontalLayout {
+        padding: 0px;
+        spacing: 0px;
+        min-width: 0px;
+        min-height: 0px;
+        preferred-width: 0px;
+        preferred-height: 0px;
+        viewport := Flickable {
+            content-x: 0px;
+            min-width: 0px;
+            min-height: 0px;
+            max-width: 100000px;
+            max-height: 100000px;
+            preferred-width: 0px;
+            preferred-height: 0px;
+            horizontal-stretch: 1;
+            content-width: self.width;
+            content-height: root.content-height;
+            mouse-drag-pan-enabled: false;
+            @children
+        }
+        Rectangle {
+            width: SettingsTheme.scrollbar-width;
+            min-height: 0px;
+            preferred-height: 0px;
+            opacity: root.scrollable ? 1 : 0;
+            thumb := Rectangle {
+                y: root.thumb-travel * (-root.content-y / max(1px, root.scroll-limit));
+                width: parent.width;
+                height: root.thumb-height;
+                border-radius: 6px;
+                background: track.has-hover || track.pressed ? SettingsTheme.scroll-handle-hover : SettingsTheme.scroll-handle;
+            }
+            track := TouchArea {
+                enabled: root.scrollable;
+                property <bool> dragging;
+                property <length> press-y;
+                property <length> press-offset;
+                pointer-event(event) => {
+                    if event.button == PointerEventButton.left && event.kind == PointerEventKind.down {
+                        self.dragging = self.mouse-y >= thumb.y && self.mouse-y <= thumb.y + thumb.height;
+                        if !self.dragging {
+                            root.content-y = clamp(root.content-y + (self.mouse-y < thumb.y ? root.height : -root.height), -root.scroll-limit, 0px);
+                        }
+                        self.press-y = self.mouse-y;
+                        self.press-offset = root.content-y;
+                    }
+                    if event.kind == PointerEventKind.up { self.dragging = false; }
+                }
+                moved => {
+                    if self.pressed && self.dragging && root.thumb-travel > 0px {
+                        root.content-y = clamp(self.press-offset - (self.mouse-y - self.press-y) * root.scroll-limit / root.thumb-travel, -root.scroll-limit, 0px);
+                    }
+                }
+                scroll-event(event) => {
+                    if event.delta-y != 0px {
+                        root.content-y = clamp(root.content-y + event.delta-y, -root.scroll-limit, 0px);
+                        return accept;
+                    }
+                    return reject;
+                }
+            }
+        }
+    }
+}

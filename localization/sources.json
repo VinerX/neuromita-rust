@@ -1,0 +1,6 @@
+[
+  "src/bin/neuromita-gui",
+  "src/character/model.rs",
+  "src/presentation/presets.rs",
+  "ui"
+]

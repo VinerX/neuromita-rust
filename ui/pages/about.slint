@@ -1,0 +1,79 @@
+import { Theme, Icons } from "../theme.slint";
+import { Label, Icon, ActionSurface } from "../components/controls.slint";
+import { I18n } from "../i18n.slint";
+
+component AboutLink inherits ActionSurface {
+    in property <string> caption;
+    in property <image> symbol;
+    callback open();
+    label: root.caption;
+    height: 40px;
+    background: root.hovered ? #ffffff14 : #ffffff0d;
+    border-width: 1px; border-color: Theme.border;
+    border-radius: 14px;
+    HorizontalLayout {
+        padding: 12px; spacing: 9px;
+        Icon { source: root.symbol; width: 16px; height: 16px; }
+        Label { text: root.caption; font-weight: 700; font-size: 13px; }
+    }
+    activated => { root.open(); }
+}
+
+export component AboutPage inherits Rectangle {
+    in property <string> version;
+    callback open-url(string);
+    background: Theme.background;
+    clip: true;
+    Flickable {
+        width: parent.width; height: parent.height; content-width: self.width;
+        VerticalLayout {
+            width: parent.width;
+            padding-left: 28px; padding-right: 28px; padding-top: 26px; padding-bottom: 28px; spacing: 14px;
+            Rectangle {
+                height: 183px; border-radius: 22px; border-width: 1px; border-color: Theme.border;
+                background: @linear-gradient(135deg, #171928f5, #0e101ff5);
+                HorizontalLayout { padding: 0px; alignment: start;
+                    Rectangle { width: 3px; background: Theme.accent; border-radius: 2px; }
+                }
+                HorizontalLayout {
+                    padding: 20px; spacing: 18px;
+                    Image { width: 112px; height: 112px; source: @image-url("../../assets/launcher_ui/NM_Logo.png"); image-fit: contain; }
+                    VerticalLayout {
+                        padding: 0px; spacing: 10px; alignment: center;
+                        Label { height: 14px; text: "NEUROMITA"; color: Theme.accent-hover; font-size: 10px; font-weight: 800; }
+                        Label { height: 35px; text: I18n.i18n("about.title", "О приложении"); font-size: 26px; font-weight: 700; }
+                        Label { height: 24px; text: "NeuroMita"; font-size: 17px; color: Theme.text; font-weight: 700; }
+                        Label { text: I18n.i18n("about.version", "Версия") + ": " + root.version; color: Theme.muted; font-size: 13px; }
+                    }
+                    Rectangle { horizontal-stretch: 1; }
+                }
+            }
+            Rectangle {
+                height: 160px; border-radius: 22px; background: Theme.panel; border-width: 1px; border-color: Theme.border;
+                VerticalLayout {
+                    padding: 20px; spacing: 12px;
+                    Label { height: 22px; text: I18n.i18n("about.project", "О проекте"); font-size: 16px; font-weight: 700; }
+                    Text {
+                        text: I18n.i18n("about.description", "NeuroMita — лаунчер и приложение для взаимодействия с персонажами MiSide. Интерфейс этого клиента реализован на Rust с использованием Slint.");
+                        color: Theme.muted; font-size: 13px; wrap: word-wrap;
+                    }
+                    Rectangle { vertical-stretch: 1; }
+                }
+            }
+            Rectangle {
+                height: 164px; border-radius: 22px; background: Theme.panel; border-width: 1px; border-color: Theme.border;
+                VerticalLayout {
+                    padding: 20px; spacing: 13px;
+                    Label { text: I18n.i18n("about.links", "Ссылки на проект"); height: 20px; font-size: 16px; font-weight: 700; }
+                    HorizontalLayout {
+                        padding: 0px; spacing: 12px; height: 40px;
+                        AboutLink { width: 230px; caption: I18n.i18n("about.repository", "Исходники NeuroMita"); symbol: Icons.github; open => { root.open-url("https://github.com/Atm4x/NeuroMita"); } }
+                        AboutLink { width: 260px; caption: I18n.i18n("about.rust-repository", "Rust-версия NeuroMita"); symbol: Icons.github; open => { root.open-url("https://github.com/Atm4x/neuromita-rust"); } }
+                        Rectangle { horizontal-stretch: 1; }
+                    }
+                    Rectangle { vertical-stretch: 1; }
+                }
+            }
+        }
+    }
+}

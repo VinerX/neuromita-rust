@@ -1,0 +1,322 @@
+import { SettingsTheme } from "../settings/theme.slint";
+import { SettingsText, SettingsGlyph, SettingsSectionHeading, SettingsTextField, SettingsToggle, SettingsChoiceRow, SettingsToggleRow, SettingsTextArea } from "../components/settings-kit.slint";
+import { ActionSurface } from "../components/controls.slint";
+import { VolumeSlider } from "../components/volume-slider.slint";
+import { CharacterCatalog } from "../characters/catalog.slint";
+import { CharacterPortrait } from "../characters/portrait.slint";
+import { I18n } from "../i18n.slint";
+import { ScrollView } from "std-widgets.slint";
+import { VoiceMethodSelector } from "../components/voice-method-selector.slint";
+import { CharacterVoiceTabs } from "../components/character-voice-tabs.slint";
+
+export global VoiceUi {
+    in-out property <int> backend: 0;
+    in-out property <bool> enabled: false;
+    in-out property <bool> telegram-auto-connect: false;
+    in-out property <string> telegram-service;
+    in-out property <string> telegram-wait;
+    in-out property <string> telegram-interval;
+    in-out property <string> telegram-api-id;
+    in-out property <string> telegram-api-hash;
+    in-out property <string> telegram-phone;
+    in-out property <string> telegram-status;
+    in-out property <[string]> local-models;
+    in-out property <string> local-model;
+    in-out property <[string]> local-languages;
+    in-out property <string> local-language;
+    in-out property <bool> local-auto-load;
+    in-out property <bool> local-lazy-init;
+    in-out property <string> local-status;
+    in property <string> runtime-status;
+    in-out property <[string]> api-profiles;
+    in-out property <string> api-profile;
+    in-out property <[string]> api-models;
+    in-out property <string> api-model;
+    in-out property <string> api-key;
+    in-out property <int> api-speed: 100;
+    in-out property <int> character: 0;
+    in-out property <int> avatar-offset: 0;
+    in-out property <string> voice-id;
+    in-out property <[string]> character-voice-ids;
+    in-out property <string> sample-text: I18n.i18n("voice.api.sample", "Привет! Я Мита. Давай проверим, как звучит мой голос.");
+    in-out property <bool> preview-available: false;
+    callback toggle-enabled(bool);
+    callback persist();
+    callback refresh-models();
+    callback select-character(int);
+    callback voice-id-changed(int, string);
+    callback voice-test(string, int);
+    callback telegram-connect();
+    callback local-initialize();
+    callback local-restart();
+    callback open-engine-settings();
+    callback api-profile-add();
+    callback api-profile-delete();
+}
+
+component VoiceCard inherits Rectangle {
+    background: SettingsTheme.panel;
+    border-width: 1px; border-color: SettingsTheme.border;
+    border-radius: 14px;
+    @children
+}
+
+component VoiceButton inherits ActionSurface {
+    in property <string> text;
+    in property <string> glyph;
+    in property <bool> accent: false;
+    label: root.text;
+    height: 38px;
+    border-radius: 9px; border-width: 1px;
+    border-color: root.accent ? SettingsTheme.accent : SettingsTheme.button-border;
+    background: root.accent ? SettingsTheme.accent : self.hovered ? SettingsTheme.button-hover : SettingsTheme.button;
+    HorizontalLayout {
+        padding-left: 12px; padding-right: 12px; spacing: 7px; alignment: center;
+        if root.glyph != "": SettingsGlyph { text: root.glyph; font-size: 13px; color: root.enabled ? SettingsTheme.text : SettingsTheme.muted; width: 16px; }
+        SettingsText { text: root.text; font-size: 12px; font-weight: 650; horizontal-alignment: center; color: root.enabled ? SettingsTheme.text : SettingsTheme.muted; }
+    }
+}
+
+component VoiceCardHeading inherits HorizontalLayout {
+    in property <string> title;
+    in property <string> description;
+    in property <string> glyph;
+    spacing: 13px; height: 50px; vertical-stretch: 0;
+    Rectangle { width: 45px; height: 45px; border-radius: 12px; background: SettingsTheme.heading-icon-background;
+        SettingsGlyph { text: root.glyph; width: parent.width; height: parent.height; font-size: 24px; color: SettingsTheme.accent; }
+    }
+    VerticalLayout { alignment: center; spacing: 3px;
+        SettingsText { text: root.title; font-size: 17px; font-weight: 700; }
+        SettingsText { text: root.description; color: SettingsTheme.muted; font-size: 11px; wrap: word-wrap; overflow: clip; }
+    }
+}
+
+component VoiceMiddle inherits VerticalLayout {
+    padding: 0px;
+    spacing: 0px;
+    alignment: center;
+    vertical-stretch: 1;
+    @children
+}
+
+component VoiceFieldRow inherits HorizontalLayout {
+    in property <string> title;
+    in-out property <string> value;
+    in property <string> hint;
+    in property <bool> editable: true;
+    callback committed(string);
+    height: 42px; spacing: 8px; vertical-stretch: 0;
+    VoiceMiddle { width: 145px;
+        SettingsText { text: root.title; font-size: 12px; wrap: word-wrap; overflow: clip; }
+    }
+    VoiceMiddle { horizontal-stretch: 1; min-width: 0px;
+        SettingsTextField { value <=> root.value; editable: root.editable; placeholder: root.hint; height: 38px; accepted(value) => { root.committed(value); } }
+    }
+}
+
+component VoiceSelectField inherits HorizontalLayout {
+    in property <string> title;
+    in property <[string]> options;
+    in property <string> value;
+    callback chosen(string);
+    height: 42px; spacing: 8px; vertical-stretch: 0;
+    VoiceMiddle { width: 145px;
+        SettingsText { text: root.title; font-size: 11px; wrap: word-wrap; overflow: clip; }
+    }
+    VoiceMiddle { horizontal-stretch: 1; min-width: 0px;
+        Rectangle { horizontal-stretch: 1; height: 38px;
+            background: SettingsTheme.field; border-width: 1px; border-color: SettingsTheme.field-border; border-radius: 10px;
+            HorizontalLayout { padding-left: 10px; padding-right: 10px; spacing: 8px;
+                SettingsText { text: root.value; horizontal-stretch: 1; overflow: elide; }
+                SettingsGlyph { text: "\u{f078}"; color: SettingsTheme.accent; font-size: 11px; width: 14px; }
+            }
+            TouchArea { enabled: root.options.length > 0; mouse-cursor: pointer; clicked => { popup.show(); } }
+            popup := PopupWindow { y: parent.height + 3px; width: parent.width; height: min(240px, root.options.length * 36px + 6px); close-policy: close-on-click-outside;
+                Rectangle { background: SettingsTheme.popup; border-radius: 9px; border-width: 1px; border-color: SettingsTheme.border;
+                    ScrollView { width: 100%; height: 100%; content-width: self.visible-width;
+                        VerticalLayout { padding: 3px; spacing: 0px; alignment: start;
+                            for item in root.options: VoiceButton { text: item; horizontal-stretch: 1; activated => { root.chosen(item); popup.close(); } }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+component SecretField inherits HorizontalLayout {
+    in property <string> title;
+    in-out property <string> value;
+    in property <string> hint;
+    in-out property <bool> revealed;
+    spacing: 8px; height: 42px; vertical-stretch: 0;
+    VoiceMiddle { width: 145px;
+        SettingsText { text: root.title; font-size: 12px; }
+    }
+    VoiceMiddle { horizontal-stretch: 1; min-width: 0px;
+        Rectangle { horizontal-stretch: 1; height: 38px; border-width: 1px; border-color: SettingsTheme.field-border; border-radius: 10px; background: SettingsTheme.field;
+            HorizontalLayout { padding-left: 10px; padding-right: 10px; padding-top: 3px; padding-bottom: 3px;
+                text-input := TextInput { text <=> root.value; single-line: true; input-type: root.revealed ? text : password;
+                    color: SettingsTheme.text; font-family: SettingsTheme.font-family; font-size: 12px; vertical-alignment: center;
+                }
+            }
+            if root.value == "": HorizontalLayout { padding-left: 10px; padding-right: 10px; padding-top: 3px; padding-bottom: 3px;
+                SettingsText { text: root.hint; color: SettingsTheme.muted; horizontal-stretch: 1;
+                    TouchArea { clicked => { text-input.focus(); } }
+                }
+            }
+        }
+    }
+    VoiceMiddle { width: 38px;
+        VoiceButton { width: 38px; text: ""; glyph: root.revealed ? "\u{f070}" : "\u{f06e}"; activated => { root.revealed = !root.revealed; } }
+    }
+}
+
+component StatusPill inherits Rectangle {
+    in property <string> message;
+    in property <color> ink: SettingsTheme.muted;
+    height: 36px; border-radius: 9px; border-width: 1px; border-color: SettingsTheme.border; background: SettingsTheme.field;
+    HorizontalLayout { padding-left: 12px; padding-right: 12px; spacing: 8px;
+        VoiceMiddle { width: 8px;
+            Rectangle { width: 8px; height: 8px; border-radius: 4px; background: root.ink; }
+        }
+        SettingsText { text: root.message; color: root.ink; font-size: 11px; horizontal-stretch: 1; }
+    }
+}
+
+component OutputCard inherits VoiceCard {
+    in property <int> volume;
+    in property <bool> in-chat;
+    callback changed-volume(int);
+    callback changed-chat(bool);
+    height: 155px;
+    VerticalLayout { padding: 16px; spacing: 11px;
+        VoiceCardHeading { glyph: "\u{f028}"; title: I18n.i18n("voice.output.title", "Вывод и громкость"); description: ""; height: 44px; }
+        HorizontalLayout { spacing: 10px; height: 28px;
+            VoiceMiddle { width: 140px;
+                SettingsText { text: I18n.i18n("voice.output.volume", "Громкость озвучки"); }
+            }
+            VoiceMiddle { horizontal-stretch: 1; min-width: 0px;
+                VolumeSlider { height: 28px; value: root.volume; changed(v) => { root.changed-volume(v); } }
+            }
+            VoiceMiddle { width: 44px;
+                SettingsText { text: root.volume + "%"; horizontal-alignment: right; }
+            }
+        }
+        HorizontalLayout { height: 24px; spacing: 10px;
+            SettingsText { text: I18n.i18n("voice.output.chat", "Озвучивать в чате"); horizontal-stretch: 1; }
+            VoiceMiddle { width: 42px;
+                SettingsToggle { checked: root.in-chat; toggled(v) => { root.changed-chat(v); } }
+            }
+        }
+    }
+}
+
+export component VoiceSettingsPage inherits VerticalLayout {
+    in property <bool> connected;
+    in property <int> volume;
+    in property <bool> in-chat;
+    callback change-volume(int);
+    callback change-chat(bool);
+    spacing: 14px; padding-left: 2px; padding-right: 10px; alignment: start;
+    property <length> column-space: max(0px, root.width - 28px);
+
+    VoiceCard { height: 70px; vertical-stretch: 0;
+        HorizontalLayout { padding: 14px; spacing: 12px;
+            VoiceMiddle { width: 42px;
+                SettingsToggle { checked: VoiceUi.enabled; toggled(value) => { VoiceUi.enabled = value; VoiceUi.toggle-enabled(value); } }
+            }
+            VerticalLayout { width: 152px; spacing: 2px; alignment: center;
+                SettingsText { text: I18n.i18n("voice.enabled", "Использовать озвучку"); font-weight: 700; }
+                SettingsText { text: VoiceUi.enabled ? I18n.i18n("voice.on", "Озвучка включена") : I18n.i18n("voice.off", "Озвучка выключена"); color: SettingsTheme.muted; font-size: 10px; }
+            }
+            VoiceMethodSelector {
+                selected: VoiceUi.backend;
+                changed(index) => { VoiceUi.backend = index; VoiceUi.persist(); }
+            }
+            Rectangle { horizontal-stretch: 1; }
+            StatusPill { width: 240px; message: VoiceUi.enabled ? I18n.i18n("voice.on", "Озвучка включена") : I18n.i18n("voice.off", "Озвучка выключена"); }
+        }
+    }
+    FlexboxLayout {
+        flex-direction: root.width >= 1050px ? row : column;
+        spacing: 16px;
+        vertical-stretch: 1;
+        if VoiceUi.backend == 0: VoiceCard { width: root.width >= 1050px ? root.column-space * 0.6 : max(0px, root.width - 12px); horizontal-stretch: 0;
+            VerticalLayout { padding: 17px; spacing: 11px; alignment: start;
+                VoiceCardHeading { title: I18n.i18n("voice.telegram.title", "Подключение Telegram"); description: I18n.i18n("voice.telegram.description", "Синтез через выбранного Telegram-бота."); glyph: "\u{f1d8}"; }
+                SettingsToggleRow { title: I18n.i18n("voice.telegram.auto", "Автоподключение Telegram"); checked: VoiceUi.telegram-auto-connect; changed(v) => { VoiceUi.telegram-auto-connect = v; VoiceUi.persist(); } }
+                VoiceButton { text: I18n.i18n("voice.telegram.connect", "Подключиться к Telegram"); glyph: "\u{f1d8}"; horizontal-stretch: 1; enabled: VoiceUi.preview-available; activated => { VoiceUi.telegram-connect(); } }
+                VoiceFieldRow { title: I18n.i18n("voice.telegram.service", "Канал/Сервис"); hint: "@..."; value <=> VoiceUi.telegram-service; committed(v) => { VoiceUi.persist(); } }
+                VoiceFieldRow { title: I18n.i18n("voice.telegram.wait", "Макс. ожидание (сек)"); value <=> VoiceUi.telegram-wait; committed(v) => { VoiceUi.persist(); } }
+                VoiceFieldRow { title: I18n.i18n("voice.telegram.interval", "Мин. интервал запросов (сек)"); value <=> VoiceUi.telegram-interval; committed(v) => { VoiceUi.persist(); } }
+                SettingsText { text: I18n.i18n("voice.telegram.api", "Настройки Telegram API"); font-weight: 700; height: 32px; }
+                SecretField { title: "API ID"; hint: I18n.i18n("voice.telegram.api-id", "api_id из my.telegram.org"); value <=> VoiceUi.telegram-api-id; }
+                SecretField { title: "API Hash"; hint: I18n.i18n("voice.telegram.hash", "api_hash из my.telegram.org"); value <=> VoiceUi.telegram-api-hash; }
+                SecretField { title: I18n.i18n("voice.telegram.phone", "Номер телефона"); hint: "+7..."; value <=> VoiceUi.telegram-phone; }
+            }
+        }
+        if VoiceUi.backend == 1: VoiceCard { width: root.width >= 1050px ? root.column-space * 0.6 : max(0px, root.width - 12px); horizontal-stretch: 0;
+            VerticalLayout { padding: 17px; spacing: 12px; alignment: start;
+                VoiceCardHeading { title: I18n.i18n("voice.local.title", "Локальный движок озвучки"); description: I18n.i18n("voice.local.description", "Выберите установленную модель и способ её загрузки."); glyph: "\u{f2db}"; }
+                VoiceSelectField { title: I18n.i18n("voice.local.model", "Локальная модель"); options: VoiceUi.local-models; value: VoiceUi.local-model == "" ? I18n.i18n("voice.local.choose", "Выберите модель") : VoiceUi.local-model; chosen(v) => { VoiceUi.local-model = v; VoiceUi.persist(); } }
+                VoiceSelectField { title: I18n.i18n("voice.local.language", "Язык локальной озвучки"); options: VoiceUi.local-languages; value: VoiceUi.local-language; chosen(v) => { VoiceUi.local-language = v; VoiceUi.persist(); } }
+                SettingsToggleRow { title: I18n.i18n("voice.local.auto", "Автозагрузка модели"); checked: VoiceUi.local-auto-load; changed(v) => { VoiceUi.local-auto-load = v; VoiceUi.persist(); } }
+                SettingsToggleRow { title: I18n.i18n("voice.local.lazy", "Инициализировать модель при запросе"); checked: VoiceUi.local-lazy-init; changed(v) => { VoiceUi.local-lazy-init = v; VoiceUi.persist(); } }
+                VoiceButton { text: I18n.i18n("voice.local.restart", "Перезапустить озвучку"); glyph: "\u{f021}"; horizontal-stretch: 1; enabled: VoiceUi.preview-available; activated => { VoiceUi.local-restart(); } }
+                VoiceButton { text: I18n.i18n("voice.local.engine", "Настройки ИИ-движка"); glyph: "\u{f2db}"; horizontal-stretch: 1; activated => { VoiceUi.open-engine-settings(); } }
+            }
+        }
+        if VoiceUi.backend == 2: VoiceCard { width: root.width >= 1050px ? root.column-space * 0.6 : max(0px, root.width - 12px); horizontal-stretch: 0;
+            VerticalLayout { padding: 17px; spacing: 11px; alignment: start;
+                VoiceCardHeading { title: I18n.i18n("voice.api.title", "Профиль API озвучки"); description: I18n.i18n("voice.api.description", "Подключение к провайдеру и голоса персонажей."); glyph: "\u{f0c2}"; }
+                HorizontalLayout { height: 40px; spacing: 8px;
+                    VoiceSelectField { title: I18n.i18n("voice.api.profile", "Профиль"); options: VoiceUi.api-profiles; value: VoiceUi.api-profile == "" ? I18n.i18n("voice.api.choose", "Выберите профиль") : VoiceUi.api-profile; chosen(v) => { VoiceUi.api-profile = v; VoiceUi.persist(); } horizontal-stretch: 1; }
+                    VoiceButton { text: ""; glyph: "\u{f067}"; width: 38px; enabled: false; activated => { VoiceUi.api-profile-add(); } }
+                    VoiceButton { text: ""; glyph: "\u{f1f8}"; width: 38px; enabled: false; activated => { VoiceUi.api-profile-delete(); } }
+                }
+                SecretField { title: I18n.i18n("voice.api.key", "API ключ"); hint: I18n.i18n("voice.api.key-hint", "Ключ провайдера"); value <=> VoiceUi.api-key; }
+                VoiceSelectField { title: I18n.i18n("voice.api.model", "Модель"); options: VoiceUi.api-models; value: VoiceUi.api-model == "" ? I18n.i18n("voice.api.model-choose", "Выберите модель") : VoiceUi.api-model; chosen(v) => { VoiceUi.api-model = v; VoiceUi.persist(); } }
+                SettingsText { text: I18n.i18n("voice.api.usage", "Бесплатные и платные модели зависят от выбранного провайдера."); color: SettingsTheme.muted; font-size: 11px; height: 23px; }
+                HorizontalLayout { height: 38px; spacing: 10px;
+                    SettingsText { text: I18n.i18n("voice.api.speed", "Скорость"); width: 145px; }
+                    SettingsTextField { value: (VoiceUi.api-speed / 100) + "," + (Math.mod(VoiceUi.api-speed, 100) < 10 ? "0" : "") + Math.mod(VoiceUi.api-speed, 100) + " ×"; editable: false; horizontal-stretch: 1; }
+                    VoiceButton { width: 35px; text: "−"; activated => { VoiceUi.api-speed = max(50, VoiceUi.api-speed - 5); VoiceUi.persist(); } }
+                    VoiceButton { width: 35px; text: "+"; activated => { VoiceUi.api-speed = min(200, VoiceUi.api-speed + 5); VoiceUi.persist(); } }
+                }
+                CharacterVoiceTabs { selected: VoiceUi.character; offset <=> VoiceUi.avatar-offset; voice-id <=> VoiceUi.voice-id; changed-id(character, value) => { VoiceUi.voice-id-changed(character, value); } changed-selection(character) => { VoiceUi.select-character(character); } }
+            }
+        }
+        VerticalLayout { width: root.width >= 1050px ? root.column-space * 0.4 : max(0px, root.width - 12px); horizontal-stretch: 0; spacing: 16px; padding: 0px; alignment: start;
+            if VoiceUi.backend == 0: VoiceCard { height: 158px;
+                VerticalLayout { padding: 17px; spacing: 10px;
+                    VoiceCardHeading { title: I18n.i18n("voice.telegram.status-title", "Состояние подключения"); description: ""; glyph: "\u{f1d8}"; }
+                    StatusPill { ink: #f45261; message: VoiceUi.telegram-status == "" ? I18n.i18n("voice.telegram.disconnected", "Telegram не подключён") : VoiceUi.telegram-status; }
+                    SettingsText { text: I18n.i18n("voice.telegram.hint", "При первом подключении Telegram запросит код входа."); font-size: 11px; color: SettingsTheme.muted; wrap: word-wrap; overflow: clip; }
+                }
+            }
+            if VoiceUi.backend == 1: VoiceCard { height: 214px;
+                VerticalLayout { padding: 17px; spacing: 9px;
+                    VoiceCardHeading { title: I18n.i18n("voice.local.status-title", "Состояние модели"); description: I18n.i18n("voice.local.status-hint", "Готовность выбранной модели к синтезу."); glyph: "\u{f058}"; }
+                    StatusPill { ink: #ffb544; message: VoiceUi.local-status == "" ? I18n.i18n("voice.local.not-ready", "Требуется инициализация") : VoiceUi.local-status; }
+                    SettingsText { text: VoiceUi.runtime-status; color: SettingsTheme.muted; font-size: 11px; wrap: word-wrap; overflow: clip; }
+                    VoiceButton { text: I18n.i18n("voice.local.initialize", "Инициализировать"); glyph: "\u{f04b}"; horizontal-stretch: 1; accent: true; enabled: VoiceUi.preview-available; activated => { VoiceUi.local-initialize(); } }
+                    SettingsText { text: I18n.i18n("voice.local.model-hint", "Параметры синтеза и голоса — в настройках выбранной модели."); color: SettingsTheme.muted; font-size: 11px; wrap: word-wrap; overflow: clip; }
+                }
+            }
+            if VoiceUi.backend == 2: VoiceCard { height: 300px;
+                VerticalLayout { padding: 17px; spacing: 10px;
+                    VoiceCardHeading { title: I18n.i18n("voice.api.test-title", "Проверка голоса"); description: I18n.i18n("voice.api.test-hint", "Прослушайте голос выбранного персонажа."); glyph: "\u{f04b}"; }
+                    SettingsText { text: VoiceUi.character >= 0 && VoiceUi.character < CharacterCatalog.entries.length ? CharacterCatalog.name(CharacterCatalog.entries[VoiceUi.character]) : I18n.i18n("voice.api.all", "Все персонажи"); font-size: 11px; }
+                    SettingsTextArea { value <=> VoiceUi.sample-text; height: 82px; }
+                    VoiceButton { text: I18n.i18n("voice.api.test-button", "Проверить и прослушать"); glyph: "\u{f04b}"; accent: true; horizontal-stretch: 1; enabled: VoiceUi.preview-available; activated => { VoiceUi.voice-test(VoiceUi.sample-text, VoiceUi.character); } }
+                    SettingsText { text: I18n.i18n("voice.api.paid", "Проверка отправляет текст провайдеру. Платные модели расходуют баланс API."); color: SettingsTheme.muted; font-size: 11px; wrap: word-wrap; overflow: clip; }
+                }
+            }
+            if VoiceUi.backend != 0: OutputCard { volume: root.volume; in-chat: root.in-chat;
+                changed-volume(v) => { root.change-volume(v); }
+                changed-chat(v) => { root.change-chat(v); }
+            }
+        }
+    }
+}

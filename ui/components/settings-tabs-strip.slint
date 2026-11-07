@@ -1,0 +1,92 @@
+import { SettingsNavigationTab } from "settings-navigation-tab.slint";
+import { SettingsTheme } from "../settings/theme.slint";
+
+export struct SettingsTabEntry {
+    section: int,
+    title: string,
+    glyph: string,
+}
+
+export component SettingsTabsStrip inherits Rectangle {
+    in property <[SettingsTabEntry]> entries;
+    in property <[bool]> visibility;
+    in property <int> active-section;
+    callback selected(int);
+
+    in-out property <length> scroll-x <=> viewport.content-x;
+    out property <length> scroll-limit: max(0px, items.preferred-width - viewport.width);
+
+    height: 43px;
+    min-width: 0px;
+    vertical-stretch: 0;
+    clip: true;
+    background: transparent;
+
+    changed scroll-limit => {
+        root.scroll-x = clamp(root.scroll-x, -root.scroll-limit, 0px);
+    }
+
+    wheel := TouchArea {
+        width: parent.width;
+        height: 42px;
+        scroll-event(event) => {
+            if (root.scroll-limit > 0px && event.delta-x == 0px && event.delta-y != 0px) {
+                root.scroll-x = clamp(root.scroll-x + event.delta-y, -root.scroll-limit, 0px);
+                return accept;
+            }
+            return reject;
+        }
+
+        viewport := Flickable {
+            width: parent.width;
+            height: 42px;
+            content-width: items.width;
+            content-height: self.height;
+            mouse-drag-pan-enabled: false;
+
+            items := HorizontalLayout {
+                width: max(viewport.width, self.preferred-width);
+                height: 42px;
+                padding-left: 10px;
+                padding-right: 10px;
+                spacing: 3px;
+
+                for entry in root.entries: SettingsNavigationTab {
+                    visible: root.visibility[entry.section];
+                    label: entry.title;
+                    glyph: entry.glyph;
+                    active: root.active-section == entry.section;
+                    horizontal-stretch: 1;
+                    activated => { root.selected(entry.section); }
+                }
+            }
+        }
+    }
+
+    HorizontalLayout {
+        width: parent.width;
+        height: 42px;
+        padding: 0px;
+        spacing: 0px;
+        Rectangle {
+            width: 28px;
+            horizontal-stretch: 0;
+            opacity: root.scroll-x < -1px ? 1 : 0;
+            background: @linear-gradient(90deg, #0e101ffa, #0e101f00);
+        }
+        Rectangle { horizontal-stretch: 1; background: transparent; }
+        Rectangle {
+            width: 28px;
+            horizontal-stretch: 0;
+            opacity: root.scroll-x > -root.scroll-limit + 1px && root.scroll-limit > 0px ? 1 : 0;
+            background: @linear-gradient(90deg, #0e101f00, #0e101ffa);
+        }
+    }
+
+    Rectangle {
+        y: 42px;
+        width: 100%;
+        height: 1px;
+        background: SettingsTheme.divider;
+    }
+}

@@ -1,8 +1,16 @@
+mod migration;
 mod model;
+mod speech;
 mod storage;
+mod transfer;
 
+pub use crate::generation::PresetId;
+pub(crate) use migration::SettingsStartupMigration;
+pub use migration::{PythonSettingsMigration, RustSettingsMigration};
 pub use model::*;
+pub use speech::*;
 pub use storage::*;
+pub use transfer::{SettingsImportFormat, SettingsTransfer, SettingsTransferError};
 
 use std::sync::{Arc, Mutex};
 
@@ -10,10 +18,10 @@ use thiserror::Error;
 use tokio::sync::{Notify, watch};
 use tokio_util::sync::CancellationToken;
 
-use crate::{
-    lifecycle::Lifecycle,
-    runtime::{self, ApiUnavailable},
-};
+use crate::lifecycle::Lifecycle;
+
+/// Static settings entry point; its runtime-bound methods are implemented in `crate::api`.
+pub struct SettingsApi;
 
 #[derive(Debug, Clone, Error, PartialEq, Eq)]
 pub enum SettingsError {
@@ -46,9 +54,15 @@ pub struct SettingsSnapshot {
 }
 
 pub enum SettingsSource {
-    Initial(AppSettings),
+    Initial(Box<AppSettings>),
     Stored,
 }
+impl SettingsSource {
+    pub fn initial(settings: AppSettings) -> Self {
+        Self::Initial(Box::new(settings))
+    }
+}
+
 pub struct SettingsConfig {
     pub source: SettingsSource,
     pub repository: Arc<dyn SettingsRepository>,
@@ -63,52 +77,6 @@ pub(crate) struct SettingsOwner {
     state: Mutex<State>,
     updates: watch::Sender<Arc<SettingsSnapshot>>,
     save: Notify,
-}
-
-pub struct SettingsApi;
-
-impl SettingsApi {
-    fn owner() -> Result<Arc<SettingsOwner>, SettingsError> {
-        Ok(Arc::clone(
-            &runtime::current().map_err(SettingsError::from)?.settings,
-        ))
-    }
-    pub fn snapshot<T: SettingsSection>() -> Result<SectionSnapshot<T>, SettingsError> {
-        Self::owner()?.snapshot()
-    }
-    pub fn snapshot_all() -> Result<Arc<SettingsSnapshot>, SettingsError> {
-        Self::owner()?.snapshot_all()
-    }
-    pub fn observe() -> Result<watch::Receiver<Arc<SettingsSnapshot>>, SettingsError> {
-        Self::owner()?.observe()
-    }
-    pub fn replace<T: SettingsSection>(
-        expected_revision: u64,
-        value: T,
-    ) -> Result<SectionSnapshot<T>, SettingsError> {
-        Self::owner()?.replace(expected_revision, value)
-    }
-    /// The edit must be short and must not block or re-enter SettingsApi.
-    pub fn edit<T: SettingsSection>(
-        edit: impl FnOnce(&mut T),
-    ) -> Result<SectionSnapshot<T>, SettingsError> {
-        Self::owner()?.edit(edit)
-    }
-    pub async fn flush() -> Result<(), SettingsError> {
-        Self::owner()?.flush().await
-    }
-    pub fn retry_save() -> Result<(), SettingsError> {
-        Self::owner()?.request_save()
-    }
-}
-
-impl From<ApiUnavailable> for SettingsError {
-    fn from(error: ApiUnavailable) -> Self {
-        match error {
-            ApiUnavailable::Uninitialized => Self::Uninitialized,
-            ApiUnavailable::Stopped => Self::Stopped,
-        }
-    }
 }
 
 impl SettingsOwner {
@@ -136,6 +104,24 @@ impl SettingsOwner {
             return Err(SettingsError::Stopped);
         }
         Ok(self.updates.subscribe())
+    }
+
+    pub(crate) fn export(&self) -> Result<SettingsTransfer, SettingsError> {
+        let snapshot = self.snapshot_all()?;
+        Ok(SettingsTransfer::new(StoredSettings {
+            revision: snapshot.revision,
+            settings: snapshot.values.clone(),
+        })?)
+    }
+
+    pub(crate) fn import(
+        &self,
+        expected_revision: u64,
+        transfer: SettingsTransfer,
+    ) -> Result<Arc<SettingsSnapshot>, SettingsError> {
+        self.change(Some(expected_revision), move |settings| {
+            *settings = transfer.into_stored().settings;
+        })
     }
     pub(crate) fn replace<T: SettingsSection>(
         &self,
@@ -165,7 +151,7 @@ impl SettingsOwner {
             value: T::read(&snapshot.values),
         })
     }
-    async fn flush(&self) -> Result<(), SettingsError> {
+    pub(crate) async fn flush(&self) -> Result<(), SettingsError> {
         let mut updates = self.observe()?;
         let target = updates.borrow().revision;
         self.save.notify_one();
@@ -194,7 +180,7 @@ impl SettingsOwner {
 }
 
 impl SettingsOwner {
-    fn request_save(&self) -> Result<(), SettingsError> {
+    pub(crate) fn request_save(&self) -> Result<(), SettingsError> {
         let mut state = self.state.lock().expect("settings mutex poisoned");
         if state.closed {
             return Err(SettingsError::Stopped);
@@ -273,9 +259,9 @@ impl SettingsLifecycle {
     pub(crate) async fn prepare(config: SettingsConfig) -> Result<Self, SettingsError> {
         let stored = match config.source {
             SettingsSource::Initial(settings) => {
+                let settings = *settings;
                 settings.validate()?;
                 StoredSettings {
-                    schema_version: 1,
                     revision: 0,
                     settings,
                 }
@@ -287,9 +273,6 @@ impl SettingsLifecycle {
                     .map_err(|error| SettingsError::Storage(error.to_string()))??
             }
         };
-        if stored.schema_version != 1 {
-            return Err(SettingsError::Storage("unsupported settings schema".into()));
-        }
         stored.settings.validate()?;
         let snapshot = Arc::new(SettingsSnapshot {
             closed: false,
@@ -325,7 +308,6 @@ impl SettingsLifecycle {
             return Ok(());
         }
         let stored = StoredSettings {
-            schema_version: 1,
             revision: snapshot.revision,
             settings: snapshot.values.clone(),
         };
@@ -386,6 +368,9 @@ mod tests {
         release: Arc<Barrier>,
     }
     impl SettingsRepository for GatedFailure {
+        fn migrate(&self) -> Result<(), SettingsError> {
+            Err(SettingsError::Storage("not used".into()))
+        }
         fn load(&self) -> Result<StoredSettings, SettingsError> {
             Err(SettingsError::Storage("not used".into()))
         }
@@ -408,7 +393,7 @@ mod tests {
         });
         let lifecycle = Arc::new(
             SettingsLifecycle::prepare(SettingsConfig {
-                source: SettingsSource::Initial(AppSettings::initial_profile()),
+                source: SettingsSource::initial(AppSettings::initial_profile()),
                 repository,
             })
             .await

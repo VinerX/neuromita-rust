@@ -1,0 +1,115 @@
+import { ConversationDialog, ConversationUi } from "../sandbox/admin.slint";
+import { SandboxTheme, Fa } from "../sandbox/theme.slint";
+import { Caption, Glyph, HeaderButton, Centered } from "../sandbox/controls.slint";
+import { SandboxChat } from "../sandbox/chat.slint";
+import { SandboxInspector } from "../sandbox/inspector.slint";
+import { ChatRow, ChatStatus } from "../sandbox/models.slint";
+import { I18n } from "../i18n.slint";
+
+export { ChatRow, ChatStatus }
+
+export component SandboxPage inherits Rectangle {
+    in property <[ChatRow]> messages;
+    in property <int> clients;
+    in property <bool> server-running;
+    in property <bool> connected;
+    in property <bool> generation-ready;
+    in property <string> generation-error;
+    in property <bool> connecting;
+    in property <bool> sending;
+    in property <int> character;
+    in property <string> model;
+    in property <string> preset;
+    in property <string> address;
+    in property <string> error;
+    in property <string> anchor;
+    in property <int> active;
+    in property <int> volume;
+    in property <bool> voice-enabled;
+    in property <string> attitude;
+    in property <string> boredom;
+    in property <string> stress;
+    in property <string> accepted;
+    in-out property <string> draft;
+    in-out property <string> model-input;
+    in-out property <bool> follow-tail;
+    callback connect(string);
+    callback send(string);
+    callback cancel(string);
+    callback select-character(int);
+    callback refresh();
+    callback set-volume(int);
+    callback dismiss-error();
+    callback home();
+    callback settings();
+    callback open-memory(int);
+    background: SandboxTheme.canvas;
+    VerticalLayout {
+        padding-left: 28px; padding-right: 28px; padding-top: 24px; padding-bottom: 24px; spacing: 8px;
+        HorizontalLayout {
+            height: 48px; spacing: 18px;
+            HorizontalLayout {
+                spacing: 10px; horizontal-stretch: 1;
+                Glyph { text: "\u{f0c3}"; font-size: 22px; width: 24px; color: #ff6db7; }
+                Caption { text: I18n.i18n("sandbox.hero.title", "Песочница / Sandbox"); font-size: 24px; font-weight: 800; horizontal-stretch: 0; color: #f3efff; }
+                Centered { width: 56px; Rectangle {
+                    width: 56px; height: 23px; border-radius: 10px; border-color: #b74b7d4d; border-width: 1px; background: #b74b7d1a;
+                    Caption { text: "BETA"; font-size: 10.6667px; font-weight: 800; color: #ffe8f4; horizontal-alignment: center; width: 100%; height: 100%; }
+                } }
+                Rectangle { horizontal-stretch: 1; }
+            }
+            Centered { HeaderButton { text: I18n.i18n("sandbox.header.guide", "Руководство"); enabled: false; } }
+            Centered { HeaderButton { text: I18n.i18n("sandbox.header.wiki", "Вики"); enabled: false; } }
+            Centered { HeaderButton { text: I18n.i18n("sandbox.header.settings", "Настройки"); activated => { root.settings(); } } }
+            Centered { HeaderButton {
+                text: I18n.i18n("sandbox.header.home", "На главную");
+                background: self.pressed ? #a52b65 : self.hovered ? #d4548e : @linear-gradient(90deg, #b74b7d, #c04c80);
+                border-color: #b74b7db3; activated => { root.home(); }
+            } }
+        }
+        if root.connected && !root.generation-ready: Caption { text: root.generation-error; color: SandboxTheme.muted; height: 24px; font-size: 12px; }
+        HorizontalLayout {
+            spacing: 12px; vertical-stretch: 1;
+            Rectangle {
+                horizontal-stretch: 1; min-width: 0px;
+                SandboxChat {
+                    width: 100%; height: 100%; messages: root.messages; character: root.character;
+                    connected: root.generation-ready; sending: root.sending;
+                    draft <=> root.draft; follow-tail <=> root.follow-tail;
+                    send(text) => { root.send(text); }
+                    cancel(id) => { root.cancel(id); }
+                    refresh => { root.refresh(); }
+                }
+            }
+            SandboxInspector {
+                clients: root.clients; server-running: root.server-running;
+                character: root.character; model: root.model; preset: root.preset;
+                connected: root.connected; connecting: root.connecting; address: root.address;
+                voice-enabled: root.voice-enabled; anchor: root.anchor; active: root.active;
+                attitude: root.attitude; boredom: root.boredom; stress: root.stress;
+                accepted: root.accepted; message-count: root.messages.length;
+                model-input <=> root.model-input;
+                connect(name) => { root.connect(name); }
+                selected(id) => { root.select-character(id); }
+                refresh => { root.refresh(); }
+                settings => { root.settings(); }
+                open-memory(id) => { root.open-memory(id); }
+                logs => { root.settings(); }
+            }
+        }
+    }
+    if ConversationUi.confirmation > 0 || ConversationUi.history || ConversationUi.diagnostics != "": ConversationDialog { width: 100%; height: 100%; messages: root.messages; }
+    if root.error != "": VerticalLayout { width: 100%; height: 100%; padding-bottom: 24px; padding-left: 28px; padding-right: 28px; alignment: end;
+        HorizontalLayout { padding: 0px; alignment: center;
+            Rectangle {
+                width: min(680px, parent.width); height: 54px;
+                background: #2a1425; border-width: 1px; border-color: #ff8bb3;
+                border-radius: 12px;
+                HorizontalLayout { padding-left: 16px; padding-right: 12px; spacing: 8px;
+                    Caption { text: root.error; horizontal-stretch: 1; font-size: 12px; }
+                    Centered { HeaderButton { text: I18n.i18n("sandbox.error.dismiss", "Закрыть"); activated => { root.dismiss-error(); } } }
+                }
+            }
+        }
+    }
+}

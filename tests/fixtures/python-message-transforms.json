@@ -1,0 +1,885 @@
+[
+  {
+    "name": "merge_system_messages_0",
+    "transform": {
+      "id": "merge_system_messages"
+    },
+    "input": [],
+    "expected": []
+  },
+  {
+    "name": "merge_system_messages_1",
+    "transform": {
+      "id": "merge_system_messages"
+    },
+    "input": [
+      {
+        "role": "system",
+        "content": "  "
+      }
+    ],
+    "expected": [
+      {
+        "role": "system",
+        "content": "  "
+      }
+    ]
+  },
+  {
+    "name": "merge_system_messages_2",
+    "transform": {
+      "id": "merge_system_messages"
+    },
+    "input": [
+      {
+        "role": "system",
+        "content": " first "
+      },
+      {
+        "role": "system",
+        "content": "second"
+      },
+      {
+        "role": "user",
+        "content": "  hello "
+      },
+      {
+        "role": "user",
+        "content": ""
+      },
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": " now "
+      },
+      {
+        "role": "system",
+        "content": " "
+      },
+      {
+        "role": "user",
+        "content": "again"
+      }
+    ],
+    "expected": [
+      {
+        "role": "system",
+        "content": "first\n\nsecond"
+      },
+      {
+        "role": "user",
+        "content": "  hello "
+      },
+      {
+        "role": "user",
+        "content": ""
+      },
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": " now "
+      },
+      {
+        "role": "system",
+        "content": " "
+      },
+      {
+        "role": "user",
+        "content": "again"
+      }
+    ]
+  },
+  {
+    "name": "merge_system_messages_3",
+    "transform": {
+      "id": "merge_system_messages"
+    },
+    "input": [
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": "tail"
+      }
+    ],
+    "expected": [
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": "tail"
+      }
+    ]
+  },
+  {
+    "name": "ensure_alternating_roles_0",
+    "transform": {
+      "id": "ensure_alternating_roles"
+    },
+    "input": [],
+    "expected": []
+  },
+  {
+    "name": "ensure_alternating_roles_1",
+    "transform": {
+      "id": "ensure_alternating_roles"
+    },
+    "input": [
+      {
+        "role": "system",
+        "content": "  "
+      }
+    ],
+    "expected": [
+      {
+        "role": "system",
+        "content": "  "
+      }
+    ]
+  },
+  {
+    "name": "ensure_alternating_roles_2",
+    "transform": {
+      "id": "ensure_alternating_roles"
+    },
+    "input": [
+      {
+        "role": "system",
+        "content": " first "
+      },
+      {
+        "role": "system",
+        "content": "second"
+      },
+      {
+        "role": "user",
+        "content": "  hello "
+      },
+      {
+        "role": "user",
+        "content": ""
+      },
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": " now "
+      },
+      {
+        "role": "system",
+        "content": " "
+      },
+      {
+        "role": "user",
+        "content": "again"
+      }
+    ],
+    "expected": [
+      {
+        "role": "system",
+        "content": " first \n\nsecond"
+      },
+      {
+        "role": "user",
+        "content": "  hello "
+      },
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": " now \n\n "
+      },
+      {
+        "role": "user",
+        "content": "again"
+      }
+    ]
+  },
+  {
+    "name": "ensure_alternating_roles_3",
+    "transform": {
+      "id": "ensure_alternating_roles"
+    },
+    "input": [
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": "tail"
+      }
+    ],
+    "expected": [
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": "tail"
+      }
+    ]
+  },
+  {
+    "name": "ensure_last_message_user_0",
+    "transform": {
+      "id": "ensure_last_message_user",
+      "params": {
+        "fallback_user_text": "."
+      }
+    },
+    "input": [],
+    "expected": [
+      {
+        "role": "user",
+        "content": "."
+      }
+    ]
+  },
+  {
+    "name": "ensure_last_message_user_1",
+    "transform": {
+      "id": "ensure_last_message_user",
+      "params": {
+        "fallback_user_text": "."
+      }
+    },
+    "input": [
+      {
+        "role": "system",
+        "content": "  "
+      }
+    ],
+    "expected": [
+      {
+        "role": "system",
+        "content": "  "
+      }
+    ]
+  },
+  {
+    "name": "ensure_last_message_user_2",
+    "transform": {
+      "id": "ensure_last_message_user",
+      "params": {
+        "fallback_user_text": "."
+      }
+    },
+    "input": [
+      {
+        "role": "system",
+        "content": " first "
+      },
+      {
+        "role": "system",
+        "content": "second"
+      },
+      {
+        "role": "user",
+        "content": "  hello "
+      },
+      {
+        "role": "user",
+        "content": ""
+      },
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": " now "
+      },
+      {
+        "role": "system",
+        "content": " "
+      },
+      {
+        "role": "user",
+        "content": "again"
+      }
+    ],
+    "expected": [
+      {
+        "role": "system",
+        "content": " first "
+      },
+      {
+        "role": "system",
+        "content": "second"
+      },
+      {
+        "role": "user",
+        "content": "  hello "
+      },
+      {
+        "role": "user",
+        "content": ""
+      },
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": " now "
+      },
+      {
+        "role": "system",
+        "content": " "
+      },
+      {
+        "role": "user",
+        "content": "again"
+      }
+    ]
+  },
+  {
+    "name": "ensure_last_message_user_3",
+    "transform": {
+      "id": "ensure_last_message_user",
+      "params": {
+        "fallback_user_text": "."
+      }
+    },
+    "input": [
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": "tail"
+      }
+    ],
+    "expected": [
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": "tail"
+      }
+    ]
+  },
+  {
+    "name": "system_to_user_prefix_0",
+    "transform": {
+      "id": "system_to_user_prefix",
+      "params": {
+        "tag": "[SYSTEM CONTEXT]"
+      }
+    },
+    "input": [],
+    "expected": []
+  },
+  {
+    "name": "system_to_user_prefix_1",
+    "transform": {
+      "id": "system_to_user_prefix",
+      "params": {
+        "tag": "[SYSTEM CONTEXT]"
+      }
+    },
+    "input": [
+      {
+        "role": "system",
+        "content": "  "
+      }
+    ],
+    "expected": []
+  },
+  {
+    "name": "system_to_user_prefix_2",
+    "transform": {
+      "id": "system_to_user_prefix",
+      "params": {
+        "tag": "[SYSTEM CONTEXT]"
+      }
+    },
+    "input": [
+      {
+        "role": "system",
+        "content": " first "
+      },
+      {
+        "role": "system",
+        "content": "second"
+      },
+      {
+        "role": "user",
+        "content": "  hello "
+      },
+      {
+        "role": "user",
+        "content": ""
+      },
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": " now "
+      },
+      {
+        "role": "system",
+        "content": " "
+      },
+      {
+        "role": "user",
+        "content": "again"
+      }
+    ],
+    "expected": [
+      {
+        "role": "user",
+        "content": "[SYSTEM CONTEXT] first\n\n[SYSTEM CONTEXT] second\n\n[SYSTEM CONTEXT] now\n\n  hello "
+      },
+      {
+        "role": "user",
+        "content": ""
+      },
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "user",
+        "content": "again"
+      }
+    ]
+  },
+  {
+    "name": "system_to_user_prefix_3",
+    "transform": {
+      "id": "system_to_user_prefix",
+      "params": {
+        "tag": "[SYSTEM CONTEXT]"
+      }
+    },
+    "input": [
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": "tail"
+      }
+    ],
+    "expected": [
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "user",
+        "content": "[SYSTEM CONTEXT] tail"
+      }
+    ]
+  },
+  {
+    "name": "system_messages_to_user_0",
+    "transform": {
+      "id": "system_messages_to_user",
+      "params": {
+        "tag": "[SYSTEM INFO]"
+      }
+    },
+    "input": [],
+    "expected": []
+  },
+  {
+    "name": "system_messages_to_user_1",
+    "transform": {
+      "id": "system_messages_to_user",
+      "params": {
+        "tag": "[SYSTEM INFO]"
+      }
+    },
+    "input": [
+      {
+        "role": "system",
+        "content": "  "
+      }
+    ],
+    "expected": []
+  },
+  {
+    "name": "system_messages_to_user_2",
+    "transform": {
+      "id": "system_messages_to_user",
+      "params": {
+        "tag": "[SYSTEM INFO]"
+      }
+    },
+    "input": [
+      {
+        "role": "system",
+        "content": " first "
+      },
+      {
+        "role": "system",
+        "content": "second"
+      },
+      {
+        "role": "user",
+        "content": "  hello "
+      },
+      {
+        "role": "user",
+        "content": ""
+      },
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": " now "
+      },
+      {
+        "role": "system",
+        "content": " "
+      },
+      {
+        "role": "user",
+        "content": "again"
+      }
+    ],
+    "expected": [
+      {
+        "role": "system",
+        "content": " first "
+      },
+      {
+        "role": "system",
+        "content": "second"
+      },
+      {
+        "role": "user",
+        "content": "  hello "
+      },
+      {
+        "role": "user",
+        "content": ""
+      },
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "user",
+        "content": "[SYSTEM INFO]\n now "
+      },
+      {
+        "role": "user",
+        "content": "again"
+      }
+    ]
+  },
+  {
+    "name": "system_messages_to_user_3",
+    "transform": {
+      "id": "system_messages_to_user",
+      "params": {
+        "tag": "[SYSTEM INFO]"
+      }
+    },
+    "input": [
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": "tail"
+      }
+    ],
+    "expected": [
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "user",
+        "content": "[SYSTEM INFO]\ntail"
+      }
+    ]
+  },
+  {
+    "name": "normalize_system_messages_0",
+    "transform": {
+      "id": "normalize_system_messages",
+      "params": {
+        "tag": "[SYSTEM INFO]"
+      }
+    },
+    "input": [],
+    "expected": []
+  },
+  {
+    "name": "normalize_system_messages_1",
+    "transform": {
+      "id": "normalize_system_messages",
+      "params": {
+        "tag": "[SYSTEM INFO]"
+      }
+    },
+    "input": [
+      {
+        "role": "system",
+        "content": "  "
+      }
+    ],
+    "expected": []
+  },
+  {
+    "name": "normalize_system_messages_2",
+    "transform": {
+      "id": "normalize_system_messages",
+      "params": {
+        "tag": "[SYSTEM INFO]"
+      }
+    },
+    "input": [
+      {
+        "role": "system",
+        "content": " first "
+      },
+      {
+        "role": "system",
+        "content": "second"
+      },
+      {
+        "role": "user",
+        "content": "  hello "
+      },
+      {
+        "role": "user",
+        "content": ""
+      },
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": " now "
+      },
+      {
+        "role": "system",
+        "content": " "
+      },
+      {
+        "role": "user",
+        "content": "again"
+      }
+    ],
+    "expected": [
+      {
+        "role": "system",
+        "content": " first \n\nsecond"
+      },
+      {
+        "role": "user",
+        "content": "  hello "
+      },
+      {
+        "role": "user",
+        "content": ""
+      },
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "user",
+        "content": "[SYSTEM INFO]\n now "
+      },
+      {
+        "role": "user",
+        "content": "again"
+      }
+    ]
+  },
+  {
+    "name": "normalize_system_messages_3",
+    "transform": {
+      "id": "normalize_system_messages",
+      "params": {
+        "tag": "[SYSTEM INFO]"
+      }
+    },
+    "input": [
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": "tail"
+      }
+    ],
+    "expected": [
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "user",
+        "content": "[SYSTEM INFO]\ntail"
+      }
+    ]
+  },
+  {
+    "name": "trailing_system_to_user_prefix_0",
+    "transform": {
+      "id": "trailing_system_to_user_prefix",
+      "params": {
+        "tag": "[SYSTEM INFO]"
+      }
+    },
+    "input": [],
+    "expected": []
+  },
+  {
+    "name": "trailing_system_to_user_prefix_1",
+    "transform": {
+      "id": "trailing_system_to_user_prefix",
+      "params": {
+        "tag": "[SYSTEM INFO]"
+      }
+    },
+    "input": [
+      {
+        "role": "system",
+        "content": "  "
+      }
+    ],
+    "expected": []
+  },
+  {
+    "name": "trailing_system_to_user_prefix_2",
+    "transform": {
+      "id": "trailing_system_to_user_prefix",
+      "params": {
+        "tag": "[SYSTEM INFO]"
+      }
+    },
+    "input": [
+      {
+        "role": "system",
+        "content": " first "
+      },
+      {
+        "role": "system",
+        "content": "second"
+      },
+      {
+        "role": "user",
+        "content": "  hello "
+      },
+      {
+        "role": "user",
+        "content": ""
+      },
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": " now "
+      },
+      {
+        "role": "system",
+        "content": " "
+      },
+      {
+        "role": "user",
+        "content": "again"
+      }
+    ],
+    "expected": [
+      {
+        "role": "system",
+        "content": " first "
+      },
+      {
+        "role": "system",
+        "content": "second"
+      },
+      {
+        "role": "user",
+        "content": "  hello "
+      },
+      {
+        "role": "user",
+        "content": ""
+      },
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": " now "
+      },
+      {
+        "role": "system",
+        "content": " "
+      },
+      {
+        "role": "user",
+        "content": "again"
+      }
+    ]
+  },
+  {
+    "name": "trailing_system_to_user_prefix_3",
+    "transform": {
+      "id": "trailing_system_to_user_prefix",
+      "params": {
+        "tag": "[SYSTEM INFO]"
+      }
+    },
+    "input": [
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "system",
+        "content": "tail"
+      }
+    ],
+    "expected": [
+      {
+        "role": "assistant",
+        "content": "answer"
+      },
+      {
+        "role": "user",
+        "content": "[SYSTEM INFO] tail"
+      }
+    ]
+  }
+]

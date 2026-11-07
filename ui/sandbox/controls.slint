@@ -1,0 +1,163 @@
+import { SandboxTheme, Fa } from "theme.slint";
+import { ActionSurface } from "../components/controls.slint";
+
+export component Caption inherits Text {
+    color: SandboxTheme.text; font-family: SandboxTheme.font-family;
+    font-size: SandboxTheme.body-size; vertical-alignment: center; overflow: elide;
+}
+
+export component Centered inherits VerticalLayout {
+    padding: 0px; spacing: 0px; alignment: center; horizontal-stretch: 0;
+    @children
+}
+
+export component Glyph inherits VerticalLayout {
+    in property <string> text;
+    in property <length> font-size: 14px;
+    in property <color> color: SandboxTheme.icon;
+    width: 16px; min-height: 18px; vertical-stretch: 1; padding: 0px; spacing: 0px;
+    Text {
+        text: root.text; font-family: "Font Awesome 6 Free Solid"; font-weight: 900;
+        font-size: root.font-size; color: root.color;
+        width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center;
+    }
+}
+
+export component GhostButton inherits ActionSurface {
+    in property <string> text;
+    in property <string> font-family: SandboxTheme.font-family;
+    in property <int> font-weight: 600;
+    in property <length> horizontal-padding: 12px;
+    in property <string> glyph;
+    in property <bool> left-aligned;
+    label: root.text; height: 28px; horizontal-stretch: 0;
+    border-radius: 12px; border-width: 1px;
+    border-color: self.hovered ? #b74b7d47 : #ffffff0f;
+    background: self.pressed ? #b74b7d2e : self.hovered ? #b74b7d1a : #0a0a189e;
+    HorizontalLayout {
+        alignment: root.left-aligned ? start : center;
+        padding-left: root.horizontal-padding; padding-right: root.horizontal-padding; padding-top: 5px; padding-bottom: 5px; spacing: 5px;
+        if root.glyph != "": Glyph { text: root.glyph; font-size: 12px; color: root.enabled ? SandboxTheme.icon : SandboxTheme.muted; }
+        Caption { text: root.text; horizontal-stretch: root.left-aligned ? 1 : 0; font-family: root.font-family; font-size: 12px; font-weight: root.font-weight; horizontal-alignment: root.left-aligned ? left : center; color: root.enabled ? SandboxTheme.text : SandboxTheme.muted; }
+    }
+}
+
+export component HeaderButton inherits GhostButton {
+    height: 38px; border-radius: 12px;
+    background: root.selected ? #b74b7d55 : self.pressed ? #b74b7d33 : self.hovered ? #b74b7d1f : #ffffff0a;
+    border-color: root.selected ? #b74b7d : self.hovered ? #b74b7d3d : #ffffff14;
+}
+
+export component QuickAction inherits GhostButton {
+    height: 29px; border-radius: 8px; horizontal-stretch: 1; left-aligned: true;
+    background: self.pressed ? #b74b7d2e : self.hovered ? #b74b7d1a : #0a0a18b8;
+}
+
+export component GearButton inherits ActionSurface {
+    width: 26px; height: 26px; border-radius: 6px;
+    border-width: 1px; border-color: self.hovered ? #b74b7d66 : #ffffff14;
+    background: self.hovered ? #b74b7d29 : transparent;
+    Glyph { text: Fa.gear; width: 100%; height: 100%; font-size: 13px; }
+}
+
+export component Strip inherits VerticalLayout {
+    in property <string> title;
+    in property <string> glyph;
+    padding: 2px; spacing: 8px; alignment: start; vertical-stretch: 0;
+    HorizontalLayout {
+        padding: 0px; spacing: 8px; height: 18px;
+        if root.glyph != "": Glyph { text: root.glyph; width: 14px; height: 18px; }
+        Caption { text: root.title; font-size: 13.3333px; font-weight: 800; horizontal-stretch: 1; }
+    }
+    Rectangle { height: 1px; background: #ffffff0f; }
+    @children
+}
+
+export component ValueRow inherits HorizontalLayout {
+    in property <string> title;
+    in property <string> value;
+    in property <bool> right-aligned;
+    padding: 0px; spacing: 10px; height: 24px; vertical-stretch: 0;
+    Caption { text: root.title; color: SandboxTheme.muted; font-size: 12px; font-weight: 600; min-width: 104px; }
+    Caption { text: root.value; font-size: 12.6667px; font-weight: 700; horizontal-stretch: 1; min-width: 0px; horizontal-alignment: root.right-aligned ? right : left; }
+}
+
+export component Toggle inherits ActionSurface {
+    in property <bool> checked;
+    width: 42px; height: 22px; background: transparent; border-width: 0px;
+    Rectangle {
+        x: 1px; y: 1px; width: 40px; height: 20px; border-radius: 10px;
+        background: !root.enabled ? #090a12dc : root.checked ? #79e78ceb : #ffffff1e;
+    }
+    Rectangle {
+        x: root.checked ? 23px : 3px; y: 3px; width: 16px; height: 16px; border-radius: 8px;
+        background: root.enabled ? #fffffff0 : #848692be;
+        border-width: 1px; border-color: root.enabled ? #0f11212e : #ffffff12;
+    }
+}
+
+export component StyledCheckbox inherits ActionSurface {
+    in property <bool> checked;
+    in property <string> text;
+    callback toggled(bool);
+    label: root.text;
+    height: 32px;
+    horizontal-stretch: 1;
+    border-width: 0px;
+    border-radius: 7px;
+    activated => { root.toggled(!root.checked); }
+    HorizontalLayout {
+        padding: 2px;
+        spacing: 9px;
+        Centered { width: 19px; Rectangle {
+            width: 19px; height: 19px; border-radius: 5px;
+            border-width: 1px;
+            border-color: root.checked ? SandboxTheme.accent-alt : SandboxTheme.border;
+            background: root.checked ? SandboxTheme.accent : #080912;
+            if root.checked: Glyph { text: "\u{f00c}"; width: 100%; height: 100%; font-size: 11px; color: white; }
+        } }
+        Caption { text: root.text; horizontal-stretch: 1; font-size: 12px; font-weight: 600; }
+    }
+}
+
+export component StatusRow inherits HorizontalLayout {
+    in property <string> title;
+    in property <string> state;
+    in property <bool> active;
+    in property <bool> checked;
+    callback settings();
+    padding: 0px; spacing: 8px; height: 28px;
+    Caption { text: root.title; min-width: 88px; font-weight: 600; color: SandboxTheme.muted; }
+    Centered { Rectangle {
+        height: 19px; border-radius: 9px; background: root.active ? #79e78c29 : #ffffff0f;
+        HorizontalLayout { padding-left: 10px; padding-right: 10px; Caption { text: root.state; font-size: 11px; color: root.active ? #79e78c : #ffffff73; } }
+    } }
+    Rectangle { horizontal-stretch: 1; min-width: 0px; }
+    Centered { width: 42px; Toggle { checked: root.checked; enabled: false; } }
+    Centered { width: 26px; GearButton { label: root.title; activated => { root.settings(); } } }
+}
+
+export component Field inherits Rectangle {
+    in property <color> text-color: root.enabled ? SandboxTheme.text : SandboxTheme.muted;
+    in property <bool> masked: false;
+    in-out property <string> text;
+    in property <string> placeholder;
+    in property <bool> enabled: true;
+    in property <string> font-family: SandboxTheme.font-family;
+    in property <string> leading-glyph;
+    out property <bool> focused: editor.has-focus;
+    height: 34px; background: #080912; border-radius: 8px;
+    border-width: 1px; border-color: editor.has-focus ? SandboxTheme.accent : SandboxTheme.border;
+    HorizontalLayout { padding-left: root.leading-glyph == "" ? 10px : 8px; padding-right: 10px; spacing: 14px;
+        if root.leading-glyph != "": Glyph { width: 16px; text: root.leading-glyph; color: SandboxTheme.muted; }
+        Rectangle { horizontal-stretch: 1; min-width: 0px;
+            editor := TextInput { text <=> root.text; enabled: root.enabled; input-type: root.masked ? InputType.password : InputType.text;
+                font-family: root.font-family; font-size: 12px; color: root.text-color;
+                single-line: true; vertical-alignment: center; selection-background-color: SandboxTheme.accent; selection-foreground-color: white;
+            }
+            if root.text == "": Caption { width: 100%; height: 100%; text: root.placeholder; font-family: root.font-family; color: SandboxTheme.muted;
+                TouchArea { clicked => { editor.focus(); } }
+            }
+        }
+    }
+}

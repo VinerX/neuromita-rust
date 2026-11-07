@@ -1,0 +1,5 @@
+export enum ChatStatus { history, pending, text, text-ready, voice, accepting, success, cancelled, text-error, voice-error, internal-error }
+export struct ChatRow {
+    text: string, detail: string, request-id: string, user: bool, speaker: string, character-index: int,
+    status: ChatStatus, can-cancel: bool, sequence: string,
+}

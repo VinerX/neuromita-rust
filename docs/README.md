@@ -18,6 +18,8 @@ NeuroMita объединяет диалог с персонажами, игро�
 
 ## Навигация
 
+- [GUI: перенесённые ассеты, источники и семь визуальных референсов](02-ui/gui-assets-and-reference.md).
+
 - [Область и ограничения](00-research/scope.md).
 - [Метод исследования](00-research/methodology.md).
 - [Карта репозиториев](00-research/repository-map.md).

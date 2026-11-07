@@ -1,0 +1,8 @@
+{
+  "id": "edge_tts_rvc_cuda",
+  "name": "Edge Tts Rvc Cuda",
+  "version": "0.1.0",
+  "kind": "tts",
+  "entrypoint": "plugin.py",
+  "api_version": 1
+}

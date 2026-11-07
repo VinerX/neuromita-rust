@@ -1,0 +1,176 @@
+import { CharacterCatalog } from "characters/catalog.slint";
+import { MemoryUi, MemoryItem } from "sandbox/memory.slint";
+import { ConversationUi } from "sandbox/admin.slint";
+import { Theme, Icons } from "theme.slint";
+import { Label, ActionSurface } from "components/controls.slint";
+import { Sidebar, PageId } from "components/sidebar.slint";
+import { HomePage, ComponentCard, ReleaseItem } from "pages/home.slint";
+import { SettingsPage, SettingsUi, PresetItem, PresetTemplateItem, CharacterPresets, AiEngineUi, AiHardwareDevice } from "pages/settings.slint";
+import { VoiceUi } from "pages/voice.slint";
+import { AsrUi } from "pages/asr.slint";
+import { PlaceholderPage } from "pages/placeholder.slint";
+import { LauncherMenuAction } from "components/launcher-menu.slint";
+import { I18n, LocaleOption } from "i18n.slint";
+import { SandboxPage, ChatRow, ChatStatus } from "pages/sandbox.slint";
+import { ReleasesPage, ReleaseEntry } from "pages/releases.slint";
+import { AboutPage } from "pages/about.slint";
+
+export { AiEngineUi, AiHardwareDevice, VoiceUi, AsrUi, CharacterCatalog, MemoryUi, MemoryItem, ConversationUi, SettingsUi, PresetItem, PresetTemplateItem, CharacterPresets, PageId, ComponentCard, ReleaseItem, ReleaseEntry, LauncherMenuAction, I18n, LocaleOption, ChatRow, ChatStatus }
+
+export component AppWindow inherits Window {
+    title: I18n.i18n("app.window.title", "Чат с NeuroMita");
+    icon: @image-url("../assets/launcher_ui/NM_Logo.png");
+    preferred-width: 1560px; preferred-height: 918px;
+    min-width: 1180px; min-height: 680px;
+    background: Theme.background;
+    default-font-family: Theme.font-family;
+    default-font-size: Theme.body-size;
+    in property <PageId> page: home;
+    in property <string> version;
+    in property <string> page-title;
+    in property <ComponentCard> backend;
+    in property <ComponentCard> client;
+    in property <[ReleaseItem]> releases;
+    in property <[ReleaseEntry]> release-prereleases;
+    in property <[ReleaseEntry]> release-releases;
+    in property <bool> release-loading: false;
+    in property <string> release-error;
+    in property <string> release-repository: "Atm4x/NeuroMita";
+    in-out property <int> release-revision: 0;
+    in property <bool> backend-selected;
+    in property <bool> client-selected;
+    in property <bool> game-running;
+    in property <bool> launcher-inspected;
+    in property <bool> unity-installed;
+    in property <string> notice;
+    in property <[ChatRow]> chat-messages;
+    in property <int> chat-clients;
+    in property <bool> chat-server-running;
+    in property <bool> core-connected;
+    in property <bool> chat-generation-ready;
+    in property <string> chat-generation-error;
+    in property <bool> core-connecting;
+    in property <bool> chat-sending;
+    in property <int> chat-character;
+    in property <string> chat-model;
+    in property <string> chat-preset;
+    in property <string> chat-address;
+    in property <string> chat-error;
+    in property <string> chat-anchor;
+    in property <int> chat-active;
+    in property <int> chat-volume;
+    in property <bool> chat-voice;
+    in property <string> chat-attitude: "—";
+    in property <string> chat-boredom: "—";
+    in property <string> chat-stress: "—";
+    in property <string> chat-accepted: "—";
+    in-out property <string> chat-draft;
+    in-out property <string> chat-model-input;
+    in-out property <bool> chat-follow-tail: true;
+    callback chat-send(string);
+    callback chat-cancel(string);
+    callback chat-select-character(int);
+    callback chat-refresh();
+    callback chat-set-volume(int);
+    callback chat-dismiss-error();
+    callback navigate(PageId);
+    callback language-selected(string);
+    callback reload-translations();
+    callback social-selected(string);
+    callback toggle-backend();
+    callback toggle-client();
+    callback play();
+    callback launcher-action(LauncherMenuAction);
+    callback dismiss-notice();
+    callback releases-refresh();
+    callback external-link(string);
+    HorizontalLayout {
+        padding: 0px; spacing: 0px;
+        Sidebar {
+            current-page: root.page; version: root.version;
+            navigate(page) => { root.navigate(page); }
+            language-selected(code) => { root.language-selected(code); }
+            reload-translations => { root.reload-translations(); }
+            social-selected(name) => { root.social-selected(name); }
+        }
+        Rectangle {
+            horizontal-stretch: 1; min-width: 0px; clip: true;
+            if root.page == PageId.home: HomePage {
+                width: parent.width; height: parent.height;
+                backend: { title: I18n.i18n("launcher.core.title", "Ядро Rust"), value: root.core-connected ? I18n.i18n("launcher.core.running", "Работает") : root.core-connecting ? I18n.i18n("launcher.core.starting", "Запускается…") : I18n.i18n("launcher.core.stopped", "Не запущен"), update: "" };
+                client: { title: root.client.title, value: !root.launcher-inspected ? I18n.i18n("launcher.install.checking", "Проверяется…") : root.unity-installed ? I18n.i18n("launcher.install.detected", "Установка обнаружена") : I18n.i18n("launcher.install.missing", "Не установлен"), update: "" };
+                releases: root.releases;
+                backend-selected: root.backend-selected; client-selected: root.client-selected; game-running: root.game-running;
+                toggle-backend => { root.toggle-backend(); }
+                toggle-client => { root.toggle-client(); }
+                play => { root.play(); }
+                menu-action(action) => { root.launcher-action(action); }
+                open-releases => { root.navigate(PageId.releases); }
+            }
+            if root.page == PageId.sandbox: SandboxPage {
+                width: parent.width; height: parent.height;
+                clients: root.chat-clients; server-running: root.chat-server-running;
+                messages: root.chat-messages; connected: root.core-connected; connecting: root.core-connecting;
+                sending: root.chat-sending; character: root.chat-character;
+                generation-ready: root.chat-generation-ready; generation-error: root.chat-generation-error;
+                model: root.chat-model; preset: root.chat-preset; address: root.chat-address;
+                error: root.chat-error; anchor: root.chat-anchor; active: root.chat-active;
+                volume: root.chat-volume; voice-enabled: root.chat-voice;
+                attitude: root.chat-attitude; boredom: root.chat-boredom; stress: root.chat-stress; accepted: root.chat-accepted;
+                draft <=> root.chat-draft; model-input <=> root.chat-model-input; follow-tail <=> root.chat-follow-tail;
+                send(text) => { root.chat-send(text); }
+                cancel(id) => { root.chat-cancel(id); }
+                select-character(id) => { root.chat-select-character(id); }
+                refresh => { root.chat-refresh(); }
+                set-volume(value) => { root.chat-set-volume(value); }
+                dismiss-error => { root.chat-dismiss-error(); }
+                home => { root.navigate(PageId.home); }
+                settings => { root.navigate(PageId.settings); }
+                open-memory(id) => { SettingsUi.section = 2; SettingsUi.selected-character = id; MemoryUi.open = true; MemoryUi.select(id); root.navigate(PageId.settings); }
+            }
+            if root.page == PageId.settings: SettingsPage {
+                width: parent.width; height: parent.height; connected: root.core-connected; connecting: root.core-connecting;
+                home => { root.navigate(PageId.home); }
+                wiki => { root.navigate(PageId.wiki); }
+                guide => { root.external-link("https://github.com/Atm4x/NeuroMita/wiki"); }
+                language-selected(code) => { root.language-selected(code); }
+            }
+            if root.page == PageId.releases: ReleasesPage {
+                width: parent.width; height: parent.height;
+                prereleases: root.release-prereleases; releases: root.release-releases;
+                loading: root.release-loading; error: root.release-error; repository: root.release-repository;
+                refresh => { root.releases-refresh(); }
+                open-url(url) => { root.external-link(url); }
+            }
+            if root.page == PageId.about: AboutPage {
+                width: parent.width; height: parent.height; version: root.version;
+                open-url(url) => { root.external-link(url); }
+            }
+            if root.page != PageId.home && root.page != PageId.sandbox && root.page != PageId.releases && root.page != PageId.about && root.page != PageId.settings: PlaceholderPage {
+                width: parent.width; height: parent.height;
+                title: root.page-title;
+                icon: root.page == PageId.settings ? Icons.settings : root.page == PageId.sandbox ? Icons.sandbox : root.page == PageId.releases ? Icons.releases : root.page == PageId.gallery ? Icons.gallery : root.page == PageId.wiki ? Icons.wiki : Icons.logs;
+                home => { root.navigate(PageId.home); }
+            }
+            if root.notice != "": VerticalLayout {
+                width: 100%; height: 100%; padding-top: 24px; padding-left: 28px; padding-right: 28px; alignment: start;
+                HorizontalLayout { alignment: center;
+                    Rectangle {
+                        width: min(650px, parent.width); height: 64px;
+                        border-radius: 14px; background: #0e101ff5; border-width: 1px; border-color: Theme.accent;
+                        HorizontalLayout { padding-left: 18px; padding-right: 12px; spacing: 8px;
+                            Label { horizontal-stretch: 1; text: root.notice; wrap: word-wrap; }
+                            VerticalLayout { padding: 0px; alignment: center; width: 32px;
+                                ActionSurface {
+                                    width: 32px; height: 32px; label: I18n.i18n("common.dismiss", "Закрыть");
+                                    Label { text: "×"; font-size: 22px; horizontal-alignment: center; }
+                                    activated => { root.dismiss-notice(); }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

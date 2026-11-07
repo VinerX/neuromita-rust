@@ -8,17 +8,14 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    api::ChatApiState,
     character::CharacterId,
-    generation::GenerationPreset,
     request::{
-        CancelResult, DiscoveryError, InitiateRequest, InputError, ReactRequest, ReplyRequest,
-        RequestDiscovery, RequestHandle, RequestId, RequestMetadata, RequestSnapshot,
+        CancelResult, ChatApiState, DiscoveryError, InitiateRequest, InputError, ReactRequest,
+        ReplyRequest, RequestDiscovery, RequestHandle, RequestId, RequestMetadata, RequestSnapshot,
         RequestSource, SubmitError, UserInput,
     },
-    settings::{SettingsError, SettingsOwner, VoiceSettings},
+    settings::SettingsError,
     timeline::{ContextPosition, EventId},
-    voice::{VoiceOptions, VoicePlan},
 };
 
 #[derive(Debug, Clone)]
@@ -51,36 +48,23 @@ pub enum PresenterError {
 #[derive(Clone)]
 pub struct ChatPresenter {
     api: Arc<ChatApiState>,
-    settings: Arc<SettingsOwner>,
-    preset: GenerationPreset,
     model: watch::Receiver<Arc<ChatModel>>,
 }
 
 impl ChatPresenter {
+    pub fn trace(&self, id: RequestId) -> Option<Arc<crate::request::RequestTrace>> {
+        self.api.registry.trace(id)
+    }
+
     pub fn reply(
         &self,
         character: CharacterId,
         text: String,
     ) -> Result<RequestHandle, PresenterError> {
         let input = UserInput::new(text)?;
-        let request = ReplyRequest::new(
-            character,
-            self.preset.clone(),
-            input,
-            RequestSource::Presenter,
-        );
-        Ok(self.api.send(request.with_voice(self.voice_plan()?))?)
-    }
-    fn voice_plan(&self) -> Result<VoicePlan, SettingsError> {
-        let voice = self.settings.snapshot::<VoiceSettings>()?.value;
-        Ok(if voice.in_launcher {
-            VoicePlan::Synthesize(VoiceOptions {
-                voice: voice.voice,
-                volume: voice.volume,
-            })
-        } else {
-            VoicePlan::Disabled
-        })
+        let event = self.api.publish_message(character, input)?;
+        let request = ReplyRequest::new(character, event, RequestSource::Presenter);
+        Ok(self.api.send(request)?)
     }
     pub fn react(
         &self,
@@ -88,15 +72,7 @@ impl ChatPresenter {
         target: EventId,
         instruction: String,
     ) -> Result<RequestHandle, PresenterError> {
-        let input = UserInput::new(instruction)?;
-        let request = ReactRequest::new(
-            character,
-            self.preset.clone(),
-            target,
-            input,
-            RequestSource::Presenter,
-        )
-        .with_voice(self.voice_plan()?);
+        let request = ReactRequest::new(character, target, instruction, RequestSource::Presenter);
         Ok(self.api.send(request)?)
     }
     pub fn initiate(
@@ -104,14 +80,7 @@ impl ChatPresenter {
         character: CharacterId,
         instruction: String,
     ) -> Result<RequestHandle, PresenterError> {
-        let input = UserInput::new(instruction)?;
-        let request = InitiateRequest::new(
-            character,
-            self.preset.clone(),
-            input,
-            RequestSource::Presenter,
-        )
-        .with_voice(self.voice_plan()?);
+        let request = InitiateRequest::new(character, instruction, RequestSource::Presenter);
         Ok(self.api.send(request)?)
     }
     pub fn reply_at(
@@ -120,14 +89,8 @@ impl ChatPresenter {
         text: String,
         at: ContextPosition,
     ) -> Result<RequestHandle, PresenterError> {
-        let request = ReplyRequest::new(
-            character,
-            self.preset.clone(),
-            UserInput::new(text)?,
-            RequestSource::Presenter,
-        )
-        .at(at)
-        .with_voice(self.voice_plan()?);
+        let event = self.api.publish_message(character, UserInput::new(text)?)?;
+        let request = ReplyRequest::new(character, event, RequestSource::Presenter).at(at);
         Ok(self.api.send(request)?)
     }
 
@@ -167,8 +130,6 @@ pub(crate) struct PresenterRunner {
 impl PresenterRunner {
     pub(crate) fn new(
         api: Arc<ChatApiState>,
-        settings: Arc<SettingsOwner>,
-        preset: GenerationPreset,
         discovery: RequestDiscovery,
         capacity: usize,
         retained_finished: usize,
@@ -183,8 +144,6 @@ impl PresenterRunner {
         let (updates, receive) = mpsc::channel(capacity);
         let presenter = ChatPresenter {
             api: Arc::clone(&api),
-            settings,
-            preset,
             model: receive_model,
         };
         let runner = Self {

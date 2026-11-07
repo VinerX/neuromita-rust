@@ -1,0 +1,35 @@
+[workspace]
+members = [
+	"bindings/py"
+]
+
+[package]
+name = "earshot"
+version = "1.2.2"
+description = "Ridiculously fast & accurate voice activity detection in pure Rust"
+repository = "https://github.com/pykeio/earshot"
+authors = [ "Carson M <carson@pyke.io>" ]
+license = "MIT OR Apache-2.0"
+edition = "2024"
+include = ["/src"]
+rust-version = "1.87"
+
+[features]
+default = [ "std" ]
+std = [ "alloc" ]
+# Enables `Detector::new_boxed`
+alloc = []
+libm = [ "dep:libm" ]
+
+[dependencies]
+libm = { version = "0.2", optional = true }
+
+[dev-dependencies]
+criterion = "0.7"
+hound = "3.5"
+rubato = "0.16"
+itertools = "0.14"
+
+[[bench]]
+name = "vad"
+harness = false

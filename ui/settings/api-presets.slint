@@ -1,0 +1,387 @@
+import { I18n } from "../i18n.slint";
+import { SettingsUi, PresetParameterItem } from "presets-state.slint";
+import { SettingsTheme } from "theme.slint";
+import { Card, SettingsLabel, SettingsField, SettingsButton, EditorField, SectionHeading } from "form-controls.slint";
+import { Caption, Glyph, Centered } from "../sandbox/controls.slint";
+import { ActionSurface } from "../components/controls.slint";
+import { CollapsibleSettingsSection } from "../components/collapsible-section.slint";
+import { ScrollView } from "std-widgets.slint";
+import { SettingsScrollView } from "scroll-view.slint";
+
+component ProviderIcon inherits Rectangle {
+    in property <string> provider;
+    width: 32px; height: 32px;
+    background: transparent;
+    if root.provider == "google": Image { width: parent.width; height: parent.height; source: @image-url("../../assets/providers/google.svg"); image-fit: contain; }
+    if root.provider == "openrouter": Image { width: parent.width; height: parent.height; source: @image-url("../../assets/providers/openrouter.svg"); image-fit: contain; }
+    if root.provider == "mistral": Image { width: parent.width; height: parent.height; source: @image-url("../../assets/providers/mistral-color.svg"); image-fit: contain; }
+    if root.provider == "aiio": Image { width: parent.width; height: parent.height; source: @image-url("../../assets/providers/aiio.svg"); image-fit: contain; }
+    if root.provider == "proxyapi": Image { width: parent.width; height: parent.height; source: @image-url("../../assets/providers/proxyapi.svg"); image-fit: contain; }
+    if root.provider == "groq": Image { width: parent.width; height: parent.height; source: @image-url("../../assets/providers/groq.svg"); image-fit: contain; }
+    if root.provider == "together": Image { width: parent.width; height: parent.height; source: @image-url("../../assets/providers/together-color.svg"); image-fit: contain; }
+    if root.provider == "chutes": Image { width: parent.width; height: parent.height; source: @image-url("../../assets/providers/chutes.svg"); image-fit: contain; }
+    if root.provider == "kodikrouter": Image { width: parent.width; height: parent.height; source: @image-url("../../assets/providers/kodikrouter.svg"); image-fit: contain; }
+    if root.provider == "lmstudio": Image { width: parent.width; height: parent.height; source: @image-url("../../assets/providers/lmstudio.svg"); image-fit: contain; }
+    if root.provider == "ollama": Image { width: parent.width; height: parent.height; source: @image-url("../../assets/providers/ollama.svg"); image-fit: contain; }
+    if root.provider == "openai": Image { width: parent.width; height: parent.height; source: @image-url("../../assets/providers/openai.svg"); image-fit: contain; }
+    if root.provider == "": Glyph { text: "\u{f1e6}"; font-size: 23px; color: SettingsTheme.provider-default-icon; width: 100%; height: 100%; }
+}
+
+component ApiFieldRow inherits VerticalLayout {
+    in property <string> title;
+    in property <string> hint;
+    in property <string> placeholder;
+    in property <string> link-label;
+    callback link-activated();
+    in-out property <string> value;
+    in property <bool> secret: false;
+    in-out property <bool> revealed;
+    in property <bool> editable: true;
+    spacing: 6px; vertical-stretch: 0;
+    HorizontalLayout { height: 16px; spacing: 8px;
+        SettingsLabel { text: root.title; font-size: 12px; horizontal-stretch: 1; }
+        if root.hint != "": SettingsLabel { text: root.hint; color: SettingsTheme.muted; font-size: 11px; }
+        if root.link-label != "": ActionSurface { width: 115px; height: 16px; border-width: 0px; label: root.link-label;
+            SettingsLabel { text: root.link-label; color: SettingsUi.preset-template-id == "" ? SettingsTheme.muted : SettingsTheme.documentation; font-size: 12px; width: 100%; height: 100%; horizontal-alignment: right; }
+            activated => { root.link-activated(); }
+        }
+    }
+    HorizontalLayout { spacing: 6px; height: 40px;
+        SettingsField { text <=> root.value; placeholder: root.placeholder; masked: root.secret && !root.revealed; enabled: root.editable; height: 40px; horizontal-stretch: 1; min-width: 0px; }
+        if root.secret: ActionSurface {
+            width: 30px; height: 40px; border-width: 0px; background: transparent;
+            enabled: root.editable; label: I18n.i18n("settings.preset.toggle-key", "Показать/скрыть ключ");
+            Glyph { width: 100%; height: 100%; font-size: 16px; color: SettingsTheme.muted; text: root.revealed ? "\u{f070}" : "\u{f06e}"; }
+            activated => { root.revealed = !root.revealed; }
+        }
+    }
+}
+
+component ApiParameterRow inherits HorizontalLayout {
+    in property <PresetParameterItem> parameter;
+    in property <string> wire-key: root.parameter.wire-key;
+    in property <bool> sent: root.parameter.sent;
+    callback toggled(bool);
+    in-out property <string> value;
+    callback edited(string);
+    changed value => { if (root.parameter.editable) { root.edited(root.value); } }
+    height: 60px; vertical-stretch: 0; spacing: 16px;
+    padding-top: 4px; padding-bottom: 4px;
+    VerticalLayout { padding: 0px; spacing: 4px; horizontal-stretch: 1; alignment: center;
+        HorizontalLayout { spacing: 8px;
+            SettingsLabel { text: I18n.i18n(root.parameter.title-key, root.parameter.title); font-size: 12px; color: SettingsTheme.text; horizontal-stretch: 0; }
+            SettingsLabel { text: root.wire-key; font-size: 11px; color: SettingsTheme.muted; horizontal-stretch: 1; }
+        }
+        SettingsLabel { text: I18n.i18n(root.parameter.description-key, root.parameter.description); font-size: 11px; color: SettingsTheme.muted; wrap: word-wrap; }
+    }
+    Centered { width: 20px;
+        if root.parameter.wire-key != "": ActionSurface { label: root.parameter.title; enabled: root.parameter.editable; activated => { root.toggled(!root.sent); } width: 18px; height: 18px; border-radius: 4px; border-width: 1px;
+            border-color: root.sent ? SettingsTheme.accent : SettingsTheme.field-border;
+            background: root.sent ? SettingsTheme.accent : SettingsTheme.field;
+            if root.sent: Glyph { text: "\u{f00c}"; font-size: 11px; color: white; width: 100%; height: 100%; }
+        }
+    }
+    Centered { width: 180px;
+        SettingsField { text <=> root.value; height: 40px; width: 180px; enabled: root.parameter.editable; }
+    }
+}
+
+component ApiTab inherits ActionSurface {
+    in property <string> title;
+    in property <string> glyph;
+    in property <bool> active;
+    height: 46px; horizontal-stretch: 0;
+    background: root.active ? SettingsTheme.button : SettingsTheme.canvas;
+    border-width: 0px; border-radius: 10px;
+    border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;
+    HorizontalLayout { padding-left: 22px; padding-right: 22px; spacing: 9px;
+        Centered { Glyph { text: root.glyph; font-size: 14px; color: SettingsTheme.muted; } }
+        Centered { SettingsLabel { text: root.title; font-weight: 600; font-size: 12px; } }
+    }
+    VerticalLayout { padding: 0px; spacing: 0px;
+        Rectangle { vertical-stretch: 1; }
+        Rectangle { height: 2px; background: root.active ? SettingsTheme.accent : transparent; }
+    }
+}
+
+component PresetCard inherits ActionSurface {
+    in property <string> preset-id;
+    in property <string> name;
+    in property <string> model;
+    in property <string> provider;
+    in property <bool> active;
+    in property <bool> current;
+    in property <bool> connected;
+    label: root.name;
+    height: 56px; vertical-stretch: 0;
+    background: root.current ? SettingsTheme.heading-icon-background : SettingsTheme.canvas;
+    border-width: 1px;
+    border-color: root.current ? SettingsTheme.accent : SettingsTheme.border;
+    border-radius: 10px;
+    HorizontalLayout { padding-left: 13px; padding-right: 12px; spacing: 10px;
+        Centered { width: 29px; ProviderIcon { provider: root.provider; width: 26px; height: 26px; } }
+        VerticalLayout { horizontal-stretch: 1; spacing: 2px; padding: 0px; alignment: center;
+            HorizontalLayout { spacing: 6px; alignment: start;
+                SettingsLabel { text: root.name; font-size: 14px; font-weight: 700; overflow: elide; horizontal-stretch: 0; }
+                if root.active: Centered { width: 9px; Rectangle { width: 9px; height: 9px; border-radius: 5px; background: SettingsTheme.status-success; } }
+            }
+            SettingsLabel { text: root.model == "" ? I18n.i18n("settings.preset.not-configured", "Не настроен") : root.model; font-size: 12px; color: SettingsTheme.muted; overflow: elide; }
+        }
+        Centered { width: 22px; ActionSurface { width: 22px; height: 29px; border-radius: 6px; label: "Действия с пресетом";
+            Glyph { width: 100%; height: 100%; text: "\u{f142}"; font-size: 15px; color: SettingsTheme.muted; }
+            activated => { menu.show(); }
+        } }
+    }
+    menu := PopupWindow { x: root.width - 190px; y: root.height - 2px; width: 190px; height: 74px; close-policy: close-on-click-outside;
+        Rectangle { width: 100%; height: 100%; background: SettingsTheme.popup; border-width: 1px; border-color: SettingsTheme.border; border-radius: 8px;
+            VerticalLayout { padding: 4px; spacing: 2px;
+                ActionSurface { height: 31px; enabled: root.connected; label: "Сделать активным"; border-radius: 5px; background: self.hovered ? SettingsTheme.button-hover : transparent;
+                    HorizontalLayout { padding-left: 9px; Centered { SettingsLabel { text: I18n.i18n("settings.preset.use", "Сделать активным"); } } }
+                    activated => { SettingsUi.preset-activate(root.preset-id); menu.close(); }
+                }
+                ActionSurface { height: 31px; enabled: root.connected; label: "Удалить"; border-radius: 5px; background: self.hovered ? SettingsTheme.button-hover : transparent;
+                    HorizontalLayout { padding-left: 9px; Centered { SettingsLabel { text: I18n.i18n("settings.delete", "Удалить"); } } }
+                    activated => { SettingsUi.preset-edit(root.preset-id); SettingsUi.preset-delete-id = root.preset-id; menu.close(); }
+                }
+            }
+        }
+    }
+}
+
+component ProviderBadge inherits Rectangle {
+    in property <string> kind;
+    height: 14px;
+    width: root.kind == "LOCAL" ? 42px : root.kind == "FREE" ? 30px : root.kind == "RU" ? 23px : 66px;
+    border-radius: 3px;
+    background: root.kind == "LOCAL" ? SettingsTheme.provider-local : root.kind == "RU" ? SettingsTheme.provider-ru : root.kind == "FREE" ? SettingsTheme.provider-free : SettingsTheme.accent;
+    Text {
+        width: 100%; height: 100%;
+        text: root.kind == "SUBSCRIPTION" ? I18n.i18n("settings.provider.subscription", "Подписка") : root.kind;
+        color: root.kind == "LOCAL" ? SettingsTheme.canvas : white;
+        font-family: SettingsTheme.font-family;
+        font-size: 9px; font-weight: 700;
+        horizontal-alignment: center; vertical-alignment: center;
+    }
+}
+
+component TemplateSelector inherits Rectangle {
+    in-out property <bool> opened;
+    background: SettingsTheme.canvas;
+    border-width: 1px; border-color: SettingsTheme.border;
+    border-radius: 8px; height: 40px;
+    HorizontalLayout { padding-left: 10px; padding-right: 12px; spacing: 10px;
+        Centered { ProviderIcon { provider: SettingsUi.preset-provider-icon; width: 20px; height: 20px; } }
+        SettingsLabel { text: SettingsUi.preset-template-name == "" ? I18n.i18n("settings.preset.no-template", "Без шаблона") : SettingsUi.preset-template-name; font-weight: 600; font-size: 12px; horizontal-stretch: 1; }
+        Centered { Glyph { text: root.opened ? "\u{f077}" : "\u{f078}"; color: SettingsTheme.accent; font-size: 12px; } }
+    }
+    TouchArea { mouse-cursor: pointer; clicked => { if (root.opened) { dropdown.close(); } else { dropdown.show(); } root.opened = !root.opened; } }
+    dropdown := PopupWindow {
+        y: root.height + 1px;
+        width: root.width;
+        height: min(335px, 10px + (SettingsUi.preset-templates.length + 1) * 32px);
+        close-policy: close-on-click-outside;
+        Rectangle {
+            width: 100%; height: 100%; border-radius: 8px;
+            border-width: 1px; border-color: SettingsTheme.border;
+            background: SettingsTheme.canvas;
+            VerticalLayout { padding-left: 1px; padding-right: 1px; padding-top: 5px; padding-bottom: 5px;
+                template-scroll := SettingsScrollView { content-height: (SettingsUi.preset-templates.length + 1) * 32px;
+                    VerticalLayout { width: template-scroll.visible-width; padding: 0px; spacing: 0px; alignment: start;
+                        ActionSurface {
+                            height: 32px; label: "Без шаблона"; enabled: true;
+                            border-radius: 0px; background: transparent;
+                            HorizontalLayout { padding-left: 9px; spacing: 10px;
+                                Centered { width: 20px; Glyph { text: "\u{f1e6}"; font-size: 16px; color: SettingsTheme.provider-default-icon; } }
+                                Centered { SettingsLabel { text: I18n.i18n("settings.preset.no-template", "Без шаблона"); font-size: 12px; } }
+                            }
+                            activated => { SettingsUi.preset-template-select(""); dropdown.close(); root.opened = false; }
+                        }
+                        for template in SettingsUi.preset-templates: ActionSurface {
+                            height: 32px; label: template.name;
+                            enabled: template.available;
+                            background: SettingsUi.preset-template-id == template.id ? SettingsTheme.accent : self.hovered ? SettingsTheme.button-hover : transparent;
+                            border-radius: 0px;
+                            HorizontalLayout { padding-left: 9px; padding-right: 7px; spacing: 0px;
+                                Centered { width: 20px; ProviderIcon { provider: template.icon; width: 20px; height: 20px; } }
+                                Rectangle { width: 10px; }
+                                SettingsLabel { text: template.name; font-size: 12px; color: SettingsTheme.text; horizontal-stretch: 0; overflow: elide; }
+                                Rectangle { width: 6px; }
+                                if template.badge-kind == "local": Centered { ProviderBadge { kind: "LOCAL"; } }
+                                if template.badge-kind == "ru": Centered { ProviderBadge { kind: "RU"; } }
+                                if template.badge-kind == "subscription": Centered { ProviderBadge { kind: "SUBSCRIPTION"; } }
+                                if template.badge-kind != "local" && (template.pricing == "mixed" || template.pricing == "free"): Centered { ProviderBadge { kind: "FREE"; } }
+                                if template.badge-kind != "local" && (template.pricing == "mixed" || template.pricing == "paid"): HorizontalLayout {
+                                    width: 14px; padding-left: 5px;
+                                    Text { text: "$"; font-family: SettingsTheme.font-family; color: SettingsTheme.provider-price; font-size: 14px; font-weight: 700; vertical-alignment: center; }
+                                }
+                                Rectangle { horizontal-stretch: 1; }
+                            }
+                            activated => { SettingsUi.preset-template-select(template.id); dropdown.close(); root.opened = false; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component ApiPresetsWorkspace inherits VerticalLayout {
+    in property <bool> connected;
+    spacing: 16px; padding: 2px; min-height: 0px; min-width: 0px;
+
+    SettingsLabel { visible: false; height: 0px; text: I18n.i18n("settings.api-preset.key-env", "API ключ (ссылка)"); }
+    HorizontalLayout { spacing: 12px; vertical-stretch: 1;
+        Rectangle {
+            horizontal-stretch: 1; min-width: 310px; preferred-width: 0px;
+            background: SettingsTheme.panel; border-width: 1px; border-color: SettingsTheme.border; border-radius: 12px;
+            VerticalLayout { padding-left: 10px; padding-right: 10px; padding-top: 14px; padding-bottom: 10px; spacing: 10px;
+                HorizontalLayout { spacing: 10px; height: 40px;
+                    SettingsField { text <=> SettingsUi.preset-search; placeholder: I18n.i18n("settings.presets.search", "Поиск пресетов..."); leading-glyph: "\u{f002}"; height: 40px; horizontal-stretch: 1; border-radius: 8px; }
+                    SettingsButton { text: I18n.i18n("settings.preset.add", "+ Добавить пресет"); enabled: root.connected; background: SettingsTheme.accent; horizontal-padding: 12px; height: 40px; activated => { SettingsUi.preset-new(); } }
+                }
+                ScrollView { content-width: self.visible-width; vertical-stretch: 1;
+                    VerticalLayout { padding: 0px; spacing: 6px; alignment: start;
+                        for preset in SettingsUi.settings-presets: VerticalLayout { padding: 0px; spacing: 0px; vertical-stretch: 0;
+                            if SettingsUi.matches-preset(preset, SettingsUi.preset-search): PresetCard {
+                                preset-id: preset.id; name: preset.name; model: preset.model; provider: preset.provider;
+                                active: SettingsUi.settings-active == preset.id && preset.configured;
+                                connected: root.connected;
+                                current: !SettingsUi.preset-creating && SettingsUi.preset-edit-id == preset.id;
+                                activated => { SettingsUi.preset-edit(preset.id); }
+                            }
+                        }
+                        if SettingsUi.settings-presets.length == 0: VerticalLayout { padding-top: 28px; spacing: 8px;
+                            SettingsLabel { text: I18n.i18n("settings.preset.empty", "Нет сохранённых пресетов"); color: SettingsTheme.muted; horizontal-alignment: center; }
+                            SettingsLabel { text: I18n.i18n("settings.preset.empty-hint", "Создайте пресет для подключения модели"); color: SettingsTheme.muted; horizontal-alignment: center; font-size: 11px; }
+                        }
+                    }
+                }
+            }
+        }
+        VerticalLayout { horizontal-stretch: 2; min-width: 500px; preferred-width: 0px; spacing: 14px;
+            if SettingsUi.preset-edit-id == "": Rectangle {
+                horizontal-stretch: 1; vertical-stretch: 1; border-width: 1px; border-radius: 12px; border-color: SettingsTheme.border; background: SettingsTheme.panel;
+                VerticalLayout { width: 100%; height: 100%; alignment: center; spacing: 12px;
+                    HorizontalLayout { width: 100%; height: 34px; alignment: center;
+                        Glyph { text: "\u{f1e6}"; color: SettingsTheme.muted; font-size: 28px; width: 34px; height: 34px; }
+                    }
+                    SettingsLabel { width: 100%; text: I18n.i18n("settings.preset.choose", "Выберите пресет слева"); color: SettingsTheme.muted; horizontal-alignment: center; font-size: 14px; }
+                    SettingsLabel { width: 100%; text: I18n.i18n("settings.preset.choose-hint", "Или нажмите «Добавить пресет», чтобы создать новый"); color: SettingsTheme.muted; horizontal-alignment: center; font-size: 12px; }
+                }
+            }
+            if SettingsUi.preset-edit-id != "": Rectangle {
+                height: 69px; vertical-stretch: 0;
+                background: SettingsTheme.canvas; border-width: 1px; border-color: SettingsTheme.border; border-radius: 10px;
+                HorizontalLayout { padding-left: 18px; padding-right: 17px; spacing: 12px;
+                    Centered { width: 42px; ProviderIcon { provider: SettingsUi.preset-provider-icon; width: 38px; height: 38px; } }
+                    VerticalLayout { padding: 0px; spacing: 2px; alignment: center; horizontal-stretch: 1;
+                        HorizontalLayout { spacing: 6px; alignment: start;
+                            SettingsLabel { text: SettingsUi.preset-name == "" ? I18n.i18n("settings.preset.new", "Создать пресет") : SettingsUi.preset-name; font-size: 18px; font-weight: 700; horizontal-stretch: 0; }
+                            if SettingsUi.preset-configured && SettingsUi.settings-active == SettingsUi.preset-edit-id: Centered { width: 68px; Rectangle { height: 24px; width: 68px; background: SettingsTheme.button; border-color: SettingsTheme.border; border-width: 1px; border-radius: 9px;
+                                SettingsLabel { width: 100%; height: 100%; horizontal-alignment: center; text: I18n.i18n("settings.preset.active-short", "Активен"); font-size: 11px; color: SettingsTheme.status-success; }
+                            } }
+                        }
+                        SettingsLabel { text: SettingsUi.preset-template-name == "" ? I18n.i18n("settings.preset.provider-missing", "Провайдер не выбран") : SettingsUi.preset-template-name; color: SettingsTheme.muted; font-size: 12px; }
+                    }
+                    Centered { SettingsButton { text: I18n.i18n("settings.preset.check", "Проверить"); glyph: "\u{f0c1}"; enabled: false; } }
+                    Centered { SettingsButton { text: I18n.i18n("settings.save", "Сохранить"); glyph: "\u{f0c7}"; enabled: root.connected && SettingsUi.preset-dirty && SettingsUi.preset-name != ""; background: SettingsUi.preset-dirty ? SettingsTheme.accent : SettingsTheme.button; activated => { SettingsUi.preset-save(); } } }
+                }
+            }
+            if SettingsUi.preset-pending-id != "": Card { height: 94px; vertical-stretch: 0;
+                VerticalLayout { padding: 12px; spacing: 7px;
+                    SettingsLabel { text: I18n.i18n("settings.preset.unsaved", "Есть несохранённые изменения. Сохранить перед переходом?"); font-size: 12px; color: SettingsTheme.text; }
+                    HorizontalLayout { spacing: 8px;
+                        SettingsButton { text: I18n.i18n("settings.preset.save-and-switch", "Сохранить и перейти"); enabled: !SettingsUi.preset-pending-save; activated => { SettingsUi.preset-confirm-save(); } }
+                        SettingsButton { text: I18n.i18n("settings.preset.discard-and-switch", "Не сохранять"); enabled: !SettingsUi.preset-pending-save; activated => { SettingsUi.preset-confirm-discard(); } }
+                        SettingsButton { text: I18n.i18n("sandbox.cancel", "Отменить"); enabled: !SettingsUi.preset-pending-save; activated => { SettingsUi.preset-confirm-cancel(); } }
+                        Rectangle { horizontal-stretch: 1; }
+                    }
+                }
+            }
+            if SettingsUi.preset-edit-id != "": Rectangle { vertical-stretch: 1; min-height: 0px;
+                background: SettingsTheme.panel; border-radius: 12px; border-width: 1px; border-color: SettingsTheme.border;
+                VerticalLayout { padding: 1px; spacing: 0px;
+                    Rectangle { height: 46px; vertical-stretch: 0; background: SettingsTheme.canvas; border-top-left-radius: 11px; border-top-right-radius: 11px;
+                        HorizontalLayout { spacing: 0px;
+                            ApiTab { title: I18n.i18n("settings.preset.connection", "Подключение"); glyph: "\u{f0c1}"; active: SettingsUi.preset-tab == 0; activated => { SettingsUi.preset-tab = 0; } }
+                            ApiTab { title: I18n.i18n("settings.preset.generation", "Параметры генерации"); glyph: "\u{f1de}"; active: SettingsUi.preset-tab == 1; activated => { SettingsUi.preset-tab = 1; } }
+                            Rectangle { horizontal-stretch: 1; }
+                        }
+                    }
+                    if SettingsUi.preset-tab == 0: ScrollView { content-width: self.visible-width;
+                        VerticalLayout { padding: 20px; spacing: 16px; alignment: start;
+                            HorizontalLayout { spacing: 16px;
+                                ApiFieldRow { title: I18n.i18n("settings.api-preset.name", "Название пресета"); placeholder: I18n.i18n("settings.preset.name-placeholder", "Название пресета"); value <=> SettingsUi.preset-name; preferred-width: 0px; min-width: 0px; horizontal-stretch: 1; }
+                                VerticalLayout { preferred-width: 0px; min-width: 0px; horizontal-stretch: 1; spacing: 6px;
+                                    HorizontalLayout { height: 16px;
+                                        SettingsLabel { text: I18n.i18n("settings.preset.template", "Шаблон / провайдер"); font-size: 12px; horizontal-stretch: 1; }
+                                        ActionSurface { width: 106px; height: 16px; label: "Документация"; border-width: 0px; enabled: SettingsUi.preset-template-id != "";
+                                            SettingsLabel { text: I18n.i18n("settings.preset.documentation", "Документация"); color: SettingsUi.preset-template-id == "" ? SettingsTheme.muted : SettingsTheme.documentation; font-size: 12px; width: 100%; height: 100%; }
+                                            activated => { SettingsUi.preset-documentation(); }
+                                        }
+                                    }
+                                    TemplateSelector { width: 100%; }
+                                }
+                            }
+                            if SettingsUi.preset-template-id == "": ApiFieldRow {
+                                title: I18n.i18n("settings.preset.url", "Ссылка API");
+                                placeholder: I18n.i18n("settings.preset.url-placeholder", "Адрес API");
+                                value <=> SettingsUi.preset-endpoint;
+                            }
+                            if SettingsUi.preset-template-id != "": ApiFieldRow {
+                                title: I18n.i18n("settings.preset.url", "Ссылка API");
+                                placeholder: I18n.i18n("settings.preset.url-model-placeholder", "Укажите модель для формирования URL");
+                                value: SettingsUi.preset-request-url; editable: false;
+                            }
+                            HorizontalLayout { spacing: 16px;
+                                ApiFieldRow { title: I18n.i18n("settings.api-preset.model", "Модель"); link-label: SettingsUi.preset-template-id == "gemini" ? I18n.i18n("settings.preset.models-link", "Список моделей") : ""; link-activated => { SettingsUi.preset-help(1); } placeholder: I18n.i18n("settings.preset.model-placeholder", "Название модели"); value <=> SettingsUi.preset-model; min-width: 0px; preferred-width: 0px; horizontal-stretch: 1; }
+                                ApiFieldRow { title: I18n.i18n("settings.api-preset.key-label", "API ключ"); link-label: SettingsUi.preset-template-id == "gemini" ? I18n.i18n("settings.preset.key-link", "Получить ключ") : ""; link-activated => { SettingsUi.preset-help(2); } secret: true; revealed <=> SettingsUi.preset-key-revealed; placeholder: I18n.i18n("settings.preset.key-placeholder", "Введите API ключ"); value <=> SettingsUi.preset-key-env; min-width: 0px; preferred-width: 0px; horizontal-stretch: 1; }
+                            }
+                            CollapsibleSettingsSection { title: I18n.i18n("settings.preset.reserve-keys", "Резервные ключи"); glyph: "\u{f084}"; expanded <=> SettingsUi.preset-reserve-keys-open;
+                                SettingsLabel { text: I18n.i18n("settings.preset.reserve-keys-disabled", "Резервные ключи пока не поддерживаются текущим API-ядром."); color: SettingsTheme.muted; wrap: word-wrap; }
+                            }
+                            CollapsibleSettingsSection { title: I18n.i18n("settings.preset.reserve-providers", "Резервные провайдеры"); glyph: "\u{f074}"; expanded <=> SettingsUi.preset-reserve-providers-open;
+                                SettingsLabel { text: I18n.i18n("settings.preset.reserve-providers-disabled", "Цепочки провайдеров пока не поддерживаются текущим API-ядром."); color: SettingsTheme.muted; wrap: word-wrap; }
+                            }
+                            if SettingsUi.preset-delete-id != "": Card { VerticalLayout { padding: 12px; spacing: 8px;
+                                SettingsLabel { text: I18n.i18n("settings.preset.delete-confirm", "Удалить выбранный пресет? Это действие нельзя отменить."); }
+                                HorizontalLayout { spacing: 8px;
+                                    SettingsButton { text: I18n.i18n("settings.delete", "Удалить"); enabled: root.connected; activated => { SettingsUi.preset-delete(SettingsUi.preset-delete-id); SettingsUi.preset-delete-id = ""; } }
+                                    SettingsButton { text: I18n.i18n("sandbox.cancel", "Отменить"); activated => { SettingsUi.preset-delete-id = ""; } }
+                                }
+                            } }
+                        }
+                    }
+                    if SettingsUi.preset-tab == 1: ScrollView { content-width: self.visible-width;
+                        VerticalLayout { padding: 16px; spacing: 14px; alignment: start;
+                            HorizontalLayout { height: 40px; spacing: 10px;
+                                SettingsLabel { text: I18n.i18n("settings.preset.format", "Формат параметров: ") + SettingsUi.preset-schema-label; color: SettingsTheme.muted; font-size: 12px; horizontal-stretch: 1; }
+                                SettingsButton { text: I18n.i18n("settings.preset.import", "Импорт JSON"); enabled: false; }
+                                SettingsButton { text: I18n.i18n("settings.preset.export", "Экспорт JSON"); enabled: false; }
+                                SettingsButton { text: I18n.i18n("settings.preset.customize", "Настроить параметры"); enabled: false; }
+                            }
+                            SettingsLabel { text: I18n.i18n("settings.preset.params-presenter", "Параметры принадлежат этому пресету. Поддерживаемые поля передаются ядром; остальные недоступны."); color: SettingsTheme.muted; font-size: 12px; wrap: word-wrap; }
+                            VerticalLayout { spacing: 0px; padding: 0px; alignment: start;
+                                for parameter in SettingsUi.preset-parameters: ApiParameterRow {
+                                    parameter: parameter;
+                                    wire-key: parameter.id == "max_tokens" ? SettingsUi.preset-output-token-wire-key : parameter.wire-key;
+                                    sent: parameter.id == "temperature" ? SettingsUi.preset-temperature-enabled : parameter.id == "max_tokens" ? SettingsUi.preset-tokens-enabled : parameter.sent;
+                                    toggled(value) => {
+                                        if parameter.id == "temperature" { SettingsUi.preset-temperature-enabled = value; }
+                                        if parameter.id == "max_tokens" { SettingsUi.preset-tokens-enabled = value; }
+                                    }
+                                    value: parameter.id == "temperature" ? SettingsUi.preset-temperature : parameter.id == "max_tokens" ? SettingsUi.preset-tokens : parameter.id == "timeout" ? SettingsUi.preset-timeout : "";
+                                    edited(value) => {
+                                        if parameter.id == "temperature" { SettingsUi.preset-temperature = value; }
+                                        if parameter.id == "max_tokens" { SettingsUi.preset-tokens = value; }
+                                        if parameter.id == "timeout" { SettingsUi.preset-timeout = value; }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

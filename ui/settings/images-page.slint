@@ -1,0 +1,132 @@
+import { SettingsSectionHeading, SettingsToggleRow, SettingsEntryRow, SettingsChoiceRow, SettingsButtonRow, SettingsText } from "../components/settings-kit.slint";
+import { CollapsibleSettingsSection } from "../components/collapsible-section.slint";
+import { SettingsScrollView } from "scroll-view.slint";
+import { SettingsTheme } from "theme.slint";
+import { I18n } from "../i18n.slint";
+
+export component ImagesSettingsPage inherits SettingsScrollView {
+    in-out property <bool> screen-open;
+    in-out property <bool> camera-open;
+    in-out property <bool> fading-open;
+    in-out property <bool> descriptions-open;
+    in-out property <bool> cleanup-open;
+    in-out property <bool> mita-camera-open;
+    in-out property <bool> analyze-images: true;
+    in-out property <bool> auto-attach;
+    in-out property <bool> capture-screen;
+    in-out property <bool> frame-requests;
+    in-out property <bool> exclude-window;
+    in-out property <string> screen-interval: "5.0";
+    in-out property <string> screen-quality: "25";
+    in-out property <string> screen-fps: "1";
+    in-out property <string> screen-history: "1";
+    in-out property <string> screen-transfer: "1";
+    in-out property <string> screen-width: "1024";
+    in-out property <string> screen-height: "768";
+    in-out property <bool> capture-camera;
+    in-out property <string> camera-name: "—";
+    in-out property <string> camera-interval: "5.0";
+    in-out property <string> camera-quality: "25";
+    in-out property <string> camera-width: "640";
+    in-out property <string> camera-height: "480";
+    in-out property <bool> fading-enabled;
+    in-out property <bool> fading-percent;
+    in-out property <string> fading-start: "25";
+    in-out property <string> fading-min-quality: "30";
+    in-out property <string> fading-rate: "5";
+    in-out property <bool> inline-vision;
+    in-out property <bool> non-native-vision;
+    in-out property <string> detail: I18n.i18n("settings.images.normal", "Нормальное");
+    in-out property <bool> auto-cleanup;
+    in-out property <string> cleanup-days: "30";
+    in-out property <string> cleanup-max: "500";
+    in-out property <bool> mita-camera-enabled;
+    in-out property <bool> mita-continuous;
+    in-out property <bool> mita-demand;
+    in-out property <string> mita-interval: "5.0";
+    in-out property <string> mita-frames: "8";
+    in-out property <string> mita-jpeg: "40";
+    content-height: content.preferred-height;
+
+    content := VerticalLayout {
+        width: root.visible-width; padding: 2px;
+        spacing: SettingsTheme.section-gap; alignment: start;
+
+        CollapsibleSettingsSection {
+            title: I18n.i18n("settings.images.screen", "Настройки анализа экрана");
+            subtitle: I18n.i18n("settings.images.screen.subtitle", "Настройки регулярного захвата и отправки кадров экрана модели.");
+            glyph: "\u{f108}";
+            expanded <=> root.screen-open;
+            SettingsToggleRow { title: I18n.i18n("settings.images.analysis", "Разрешить обработку изображений"); checked: root.analyze-images; changed(value) => { root.analyze-images = value; } }
+            SettingsToggleRow { title: I18n.i18n("settings.images.auto-attach", "Прикладывать скриншот к каждому сообщению"); checked: root.auto-attach; active: root.analyze-images; changed(value) => { root.auto-attach = value; } }
+            SettingsToggleRow { title: I18n.i18n("settings.images.capture", "Включить захват экрана (фоновый)"); checked: root.capture-screen; active: root.analyze-images; changed(value) => { root.capture-screen = value; } }
+            SettingsEntryRow { title: I18n.i18n("settings.images.interval", "Интервал захвата (сек)"); value <=> root.screen-interval; }
+            SettingsEntryRow { title: I18n.i18n("settings.images.quality", "Сжатие (%)"); value <=> root.screen-quality; }
+            SettingsEntryRow { title: I18n.i18n("settings.images.fps", "Кадров в секунду"); value <=> root.screen-fps; }
+            SettingsEntryRow { title: I18n.i18n("settings.images.history", "Кол-во кадров в истории"); value <=> root.screen-history; }
+            SettingsEntryRow { title: I18n.i18n("settings.images.transfer", "Кол-во кадров для передачи"); value <=> root.screen-transfer; }
+            SettingsEntryRow { title: I18n.i18n("settings.images.width", "Ширина захвата"); value <=> root.screen-width; }
+            SettingsEntryRow { title: I18n.i18n("settings.images.height", "Высота захвата"); value <=> root.screen-height; }
+            SettingsToggleRow { title: I18n.i18n("settings.images.frame-requests", "Отправлять запросы с кадрами"); checked: root.frame-requests; changed(value) => { root.frame-requests = value; } }
+            SettingsToggleRow { title: I18n.i18n("settings.images.exclude-window", "Исключить окно GUI"); checked: root.exclude-window; changed(value) => { root.exclude-window = value; } }
+        }
+        CollapsibleSettingsSection {
+            title: I18n.i18n("settings.images.camera", "Настройки захвата с камеры");
+            subtitle: I18n.i18n("settings.images.camera.subtitle", "Настройки захвата изображения с веб-камеры для отправки модели.");
+            glyph: "\u{f030}";
+            expanded <=> root.camera-open;
+            SettingsToggleRow { title: I18n.i18n("settings.images.camera-enable", "Включить захват с камеры"); checked: root.capture-camera; changed(value) => { root.capture-camera = value; } }
+            SettingsChoiceRow { title: I18n.i18n("settings.images.camera-device", "Камера"); value: root.camera-name; options: ["—"]; active: false; }
+            SettingsButtonRow { title: I18n.i18n("settings.images.refresh-cameras", "Обновить список"); button-text: I18n.i18n("settings.images.refresh", "Обновить"); active: false; }
+            SettingsEntryRow { title: I18n.i18n("settings.images.camera-interval", "Интервал захвата (сек)"); value <=> root.camera-interval; }
+            SettingsEntryRow { title: I18n.i18n("settings.images.camera-quality", "Сжатие (%)"); value <=> root.camera-quality; }
+            SettingsEntryRow { title: I18n.i18n("settings.images.camera-width", "Ширина захвата"); value <=> root.camera-width; }
+            SettingsEntryRow { title: I18n.i18n("settings.images.camera-height", "Высота захвата"); value <=> root.camera-height; }
+        }
+        CollapsibleSettingsSection {
+            title: I18n.i18n("settings.images.fade", "Настройки угасания кадров");
+            subtitle: I18n.i18n("settings.images.fade.subtitle", "Постепенное снижение качества старых кадров для экономии трафика.");
+            glyph: "\u{f252}";
+            expanded <=> root.fading-open;
+            SettingsToggleRow { title: I18n.i18n("settings.images.fade-enabled", "Включить угасание кадров"); checked: root.fading-enabled; changed(value) => { root.fading-enabled = value; } }
+            SettingsEntryRow { title: I18n.i18n("settings.images.fade-start", "Начальный индекс снижения"); value <=> root.fading-start; }
+            SettingsToggleRow { title: I18n.i18n("settings.images.fade-percent", "Исп. процентное снижение"); checked: root.fading-percent; changed(value) => { root.fading-percent = value; } }
+            SettingsEntryRow { title: I18n.i18n("settings.images.fade-min", "Минимальное качество (%)"); value <=> root.fading-min-quality; }
+            SettingsEntryRow { title: I18n.i18n("settings.images.fade-rate", "Скорость снижения"); value <=> root.fading-rate; }
+        }
+        CollapsibleSettingsSection {
+            title: I18n.i18n("settings.images.describe", "Описание изображений");
+            subtitle: I18n.i18n("settings.images.describe.subtitle", "Настройки автоматического текстового описания изображений моделью.");
+            glyph: "\u{f075}";
+            expanded <=> root.descriptions-open;
+            SettingsToggleRow { title: I18n.i18n("settings.images.inline", "Инлайн-описание (vision-модели)"); checked: root.inline-vision; changed(value) => { root.inline-vision = value; } }
+            SettingsToggleRow { title: I18n.i18n("settings.images.non-native", "Non-native режим (не-vision модели)"); checked: root.non-native-vision; changed(value) => { root.non-native-vision = value; } }
+            SettingsChoiceRow { title: I18n.i18n("settings.images.vision-provider", "Vision-провайдер"); value: I18n.i18n("settings.images.current", "Текущий"); options: [I18n.i18n("settings.images.current", "Текущий")]; active: false; }
+            SettingsChoiceRow { title: I18n.i18n("settings.images.detail", "Детализация описания"); value: root.detail; options: [I18n.i18n("settings.images.brief", "Краткое"), I18n.i18n("settings.images.normal", "Нормальное"), I18n.i18n("settings.images.detailed", "Подробное")]; changed(value) => { root.detail = value; } }
+        }
+        CollapsibleSettingsSection {
+            title: I18n.i18n("settings.images.cleanup", "Хранение и очистка изображений");
+            subtitle: I18n.i18n("settings.images.cleanup.subtitle", "Инструменты для просмотра и удаления накопленных файлов изображений.");
+            glyph: "\u{f1b2}";
+            expanded <=> root.cleanup-open;
+            SettingsButtonRow { title: I18n.i18n("settings.images.count", "Подсчитать файлы"); button-text: I18n.i18n("settings.images.count-button", "Подсчитать"); active: false; }
+            SettingsButtonRow { title: I18n.i18n("settings.images.orphans", "Найти осиротевшие файлы"); button-text: I18n.i18n("settings.images.find", "Найти"); active: false; }
+            SettingsButtonRow { title: I18n.i18n("settings.images.delete-orphans", "Удалить осиротевшие файлы"); button-text: I18n.i18n("settings.images.delete", "Удалить"); active: false; }
+            SettingsToggleRow { title: I18n.i18n("settings.images.auto-clean", "Включить авто-очистку"); checked: root.auto-cleanup; changed(value) => { root.auto-cleanup = value; } }
+            SettingsEntryRow { title: I18n.i18n("settings.images.keep-days", "Хранить изображения (дней)"); value <=> root.cleanup-days; active: root.auto-cleanup; }
+            SettingsEntryRow { title: I18n.i18n("settings.images.max-per-char", "Макс. файлов на персонажа"); value <=> root.cleanup-max; active: root.auto-cleanup; }
+        }
+        CollapsibleSettingsSection {
+            title: I18n.i18n("settings.images.mita-camera", "Камера Миты (FrameRecorder)");
+            subtitle: I18n.i18n("settings.images.mita-camera.subtitle", "Настройки виртуальной камеры на голове Миты в игре.");
+            glyph: "\u{f03d}";
+            expanded <=> root.mita-camera-open;
+            SettingsToggleRow { title: I18n.i18n("settings.images.mita-enable", "Включить камеру Миты (FrameRecorder)"); checked: root.mita-camera-enabled; changed(value) => { root.mita-camera-enabled = value; } }
+            SettingsToggleRow { title: I18n.i18n("settings.images.mita-continuous", "Режим: непрерывный захват"); checked: root.mita-continuous; active: root.mita-camera-enabled; changed(value) => { root.mita-continuous = value; } }
+            SettingsToggleRow { title: I18n.i18n("settings.images.mita-on-demand", "Режим: по команде Миты (DSL)"); checked: root.mita-demand; active: root.mita-camera-enabled; changed(value) => { root.mita-demand = value; } }
+            SettingsEntryRow { title: I18n.i18n("settings.images.mita-interval", "Интервал захвата (сек)"); value <=> root.mita-interval; active: root.mita-camera-enabled; }
+            SettingsEntryRow { title: I18n.i18n("settings.images.mita-frames", "Макс. кадров в буфере"); value <=> root.mita-frames; active: root.mita-camera-enabled; }
+            SettingsEntryRow { title: I18n.i18n("settings.images.mita-jpeg", "Качество JPEG (%)"); value <=> root.mita-jpeg; active: root.mita-camera-enabled; }
+        }
+    }
+}

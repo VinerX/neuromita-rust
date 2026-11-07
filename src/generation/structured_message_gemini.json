@@ -1,0 +1,181 @@
+{
+  "description": "Top-level structured response from the LLM.",
+  "properties": {
+    "segments": {
+      "description": "Ordered list of response segments with positional commands",
+      "items": {
+        "description": "A single segment of the response tied to a chunk of displayed text.",
+        "properties": {
+          "text": {
+            "description": "Text of this segment (required)",
+            "type": "string"
+          },
+          "emotions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Declarative emotional tags for this segment, not executable commands"
+          },
+          "commands": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Executable Sea Battle commands only: PlaceShip,<A1..J10>,<1..4>,<H|V>; PlaceShipsRandomly; MakeMove,<A1..J10>"
+          },
+          "start_game": {
+            "type": "string",
+            "description": "Start a match; the only supported identifier is seabattle"
+          },
+          "end_game": {
+            "type": "string",
+            "description": "End the current match; the only supported identifier is seabattle"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "attitude_change": {
+      "type": "number",
+      "description": "Proposed attitude change, accepted only with the reply"
+    },
+    "boredom_change": {
+      "type": "number",
+      "description": "Proposed boredom change, accepted only with the reply"
+    },
+    "stress_change": {
+      "type": "number",
+      "description": "Proposed stress change, accepted only with the reply"
+    },
+    "working_state": {
+      "type": "object",
+      "description": "Optional compact private handoff for the next turn; an empty object clears the prior handoff",
+      "properties": {
+        "focus": {
+          "type": "string"
+        },
+        "situation": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "open_loops": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "next_steps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "memory_add": {
+      "description": "Add memory: priority|content, priority low/normal/high/critical",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "memory_update": {
+      "description": "Update by stable ID: uuid|priority|content or uuid|content",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "memory_delete": {
+      "description": "Delete by stable UUID",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "memory_merge": {
+      "description": "Merge: target_uuid,source_uuid:optional merged content",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "reminder_add": {
+      "description": "Add a reminder: due_iso|text; due_iso is local ISO or RFC 3339",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "reminder_delete": {
+      "description": "Delete a reminder by its numeric N",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "timer_add": {
+      "description": "Start an autonomous timer: delay_seconds|instruction",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tool_call": {
+      "description": "Invoke the reminder tool; other tools are rejected",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Must be reminder"
+        },
+        "args": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": ["list", "add", "timer", "delete", "update"]
+            },
+            "text": {
+              "type": "string"
+            },
+            "due": {
+              "type": "string"
+            },
+            "n": {
+              "type": "integer"
+            },
+            "delay_seconds": {
+              "type": "number"
+            },
+            "instruction": {
+              "type": "string"
+            },
+            "repeat": {
+              "type": "string",
+              "description": "once, daily, weekly, or every N seconds"
+            }
+          }
+        }
+      },
+      "required": ["name"]
+    }
+  },
+  "type": "object",
+  "required": [
+    "segments"
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "source_repository": "https://github.com/Atm4x/NeuroMita",
+  "source_commit": "7f6b2625d355b1e4e22ed078283df9cfac2468ca",
+  "files": [
+    {
+      "file": "_template.json",
+      "source_path": "src/localization/locales/_template.json",
+      "bytes": 182481,
+      "sha256": "1b727fbc57be85b9c0ff53a1db3ee5d3030453c89e74b0eaf00d2e71a13e83a7"
+    },
+    {
+      "file": "de.json",
+      "source_path": "src/localization/locales/de.json",
+      "bytes": 337214,
+      "sha256": "bf5815814ab75437d03e6fc22d1df9dd6537d3ca05d1e08d7e597968c7f21a01"
+    },
+    {
+      "file": "el.json",
+      "source_path": "src/localization/locales/el.json",
+      "bytes": 428340,
+      "sha256": "3606255c386d7c9b06982719c899954d002e33047dfe9398c48b3f90d1ef63bf"
+    },
+    {
+      "file": "en.json",
+      "source_path": "src/localization/locales/en.json",
+      "bytes": 266418,
+      "sha256": "a8e0705d3f1db003ae7ccfb52d9f068e52f186bdf3a34a6e0e47d7d752eab882"
+    },
+    {
+      "file": "es.json",
+      "source_path": "src/localization/locales/es.json",
+      "bytes": 321795,
+      "sha256": "b2b3784e0009b7fc1ef8babe73faa5854e6d703f45e261a0917a14244ffa8062"
+    },
+    {
+      "file": "fr.json",
+      "source_path": "src/localization/locales/fr.json",
+      "bytes": 359496,
+      "sha256": "c68906114c0fbec62e03b2bbf73e455edcf9d35ac6ea00ddf32f367a029dc840"
+    },
+    {
+      "file": "it.json",
+      "source_path": "src/localization/locales/it.json",
+      "bytes": 319733,
+      "sha256": "1984a027b4b188bdfe428797101dc7aac486409d1d5322d66dc4c0bce916e554"
+    },
+    {
+      "file": "ja.json",
+      "source_path": "src/localization/locales/ja.json",
+      "bytes": 364669,
+      "sha256": "645eb33b500cd581ab2b6475ba0dbecc373e4f415dbe51f6013ecc4f0f61f793"
+    },
+    {
+      "file": "ko.json",
+      "source_path": "src/localization/locales/ko.json",
+      "bytes": 340645,
+      "sha256": "2df74c9bb23009b7173a6c6b161f2552e0d66820f9c864fb24a59640b9d799a9"
+    },
+    {
+      "file": "nl.json",
+      "source_path": "src/localization/locales/nl.json",
+      "bytes": 300418,
+      "sha256": "fb4ae801681602bbcdd9c3ad4bd4d764da586cba99e794b47c5f8d9aea6f9fb8"
+    },
+    {
+      "file": "pl.json",
+      "source_path": "src/localization/locales/pl.json",
+      "bytes": 316881,
+      "sha256": "3c15ce9036f811ef21980089ea8b8644b556bb87837868e8a8daa6fb53ed87ce"
+    },
+    {
+      "file": "pt.json",
+      "source_path": "src/localization/locales/pt.json",
+      "bytes": 320667,
+      "sha256": "45c5419ef1ca768cdaafe07d04ea9d97913f1aca89c4ac1d0cfa3560230c3920"
+    },
+    {
+      "file": "ro.json",
+      "source_path": "src/localization/locales/ro.json",
+      "bytes": 309404,
+      "sha256": "363058300bb8cc63a544d6f0727c15821cd1a146a0451cb8b2e27d861a382209"
+    },
+    {
+      "file": "tr.json",
+      "source_path": "src/localization/locales/tr.json",
+      "bytes": 300917,
+      "sha256": "61f37439791b0bfb73360f77b9128548a134174364d5181d10633345e06f1e11"
+    },
+    {
+      "file": "uk.json",
+      "source_path": "src/localization/locales/uk.json",
+      "bytes": 408067,
+      "sha256": "7ed9d18aefacf9f83bfe97357974bd3755f5b35542eea935f7a80c64c1fa1fd6"
+    },
+    {
+      "file": "zh.json",
+      "source_path": "src/localization/locales/zh.json",
+      "bytes": 313343,
+      "sha256": "9f1cbc376e75bee28f2541f0284242c5e3f9306e0b78337648227845c5f6089f"
+    }
+  ]
+}

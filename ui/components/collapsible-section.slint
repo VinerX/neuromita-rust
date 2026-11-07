@@ -1,0 +1,69 @@
+import { SettingsText, SettingsGlyph } from "settings-kit.slint";
+import { ActionSurface } from "controls.slint";
+import { SettingsTheme } from "../settings/theme.slint";
+import { Centered } from "../sandbox/controls.slint";
+
+export component CollapsibleSettingsSection inherits Rectangle {
+    in property <string> title;
+    in property <string> glyph;
+    in property <string> subtitle;
+    in property <bool> inner;
+    in-out property <bool> expanded;
+    in property <bool> danger;
+    background: root.inner ? transparent : SettingsTheme.section;
+    border-radius: root.inner ? 0px : SettingsTheme.section-radius;
+    border-width: root.inner ? 0px : 1px;
+    border-color: root.danger ? SettingsTheme.danger-border : SettingsTheme.border;
+    vertical-stretch: 0;
+
+    VerticalLayout {
+        spacing: 0px; padding: 1px;
+        header := ActionSurface {
+            label: root.title;
+            height: root.inner ? 38px : root.subtitle == "" ? SettingsTheme.section-header-height - 2px : 60px;
+            vertical-stretch: 0;
+            border-radius: root.inner ? 0px : SettingsTheme.section-radius - 1px;
+            border-bottom-left-radius: root.expanded ? 0px : self.border-radius;
+            border-bottom-right-radius: root.expanded ? 0px : self.border-radius;
+            border-width: 0px;
+            background: self.pressed ? SettingsTheme.header-pressed : self.hovered ? SettingsTheme.header-hover : transparent;
+            activated => { root.expanded = !root.expanded; }
+            HorizontalLayout {
+                padding-left: root.inner ? 4px : 16px;
+                padding-right: root.inner ? 4px : 16px;
+                spacing: 10px;
+                if !root.inner: Centered { width: 26px; Rectangle {
+                    width: 26px; height: 26px;
+                    border-radius: 9px;
+                    background: SettingsTheme.icon-background;
+                    border-width: 1px;
+                    border-color: SettingsTheme.icon-border;
+                    SettingsGlyph { width: 100%; height: 100%; text: root.glyph; font-size: 14px; color: SettingsTheme.icon; }
+                } }
+                VerticalLayout {
+                    padding: 0px; spacing: 2px; alignment: center; horizontal-stretch: 1;
+                    SettingsText { text: root.title; font-size: 12px; font-weight: 800; }
+                    if root.subtitle != "": SettingsText { text: root.subtitle; color: SettingsTheme.muted; font-size: 11px; }
+                }
+                SettingsGlyph { text: root.expanded ? "\u{f078}" : "\u{f054}"; width: 18px; font-size: 13px; color: SettingsTheme.arrow; }
+            }
+        }
+        Rectangle {
+            visible: root.expanded;
+            height: root.expanded ? content.preferred-height : 0px;
+            clip: true;
+            vertical-stretch: 0;
+            background: root.inner ? transparent : SettingsTheme.section-content;
+            border-bottom-left-radius: SettingsTheme.section-radius - 1px;
+            border-bottom-right-radius: SettingsTheme.section-radius - 1px;
+            content := VerticalLayout {
+                padding-left: root.inner ? 28px : 20px;
+                padding-right: root.inner ? 12px : 20px;
+                padding-top: root.inner ? 5px : 8px; padding-bottom: root.inner ? 5px : 16px; spacing: 10px;
+                @children
+            }
+        }
+    }
+}
+
+export component InnerSettingsSection inherits CollapsibleSettingsSection { inner: true; }

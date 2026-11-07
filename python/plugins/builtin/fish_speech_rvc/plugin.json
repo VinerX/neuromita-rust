@@ -1,0 +1,8 @@
+{
+  "id": "fish_speech_rvc",
+  "name": "Fish Speech Rvc",
+  "version": "0.1.0",
+  "kind": "tts",
+  "entrypoint": "plugin.py",
+  "api_version": 1
+}

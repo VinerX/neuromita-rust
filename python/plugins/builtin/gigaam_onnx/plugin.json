@@ -1,0 +1,1 @@
+{"id":"gigaam_onnx","name":"GigaAM ONNX ASR","version":"0.1.0","kind":"asr","entrypoint":"plugin.py","api_version":1}

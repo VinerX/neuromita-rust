@@ -1,0 +1,8 @@
+{
+  "id": "silero_rvc_onnx",
+  "name": "Silero Rvc Onnx",
+  "version": "0.1.0",
+  "kind": "tts",
+  "entrypoint": "plugin.py",
+  "api_version": 1
+}

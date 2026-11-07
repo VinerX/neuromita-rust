@@ -1,0 +1,96 @@
+import { SettingsSectionHeading, SettingsRow, SettingsText, SettingsGlyph, SettingsActionButton } from "../components/settings-kit.slint";
+import { CollapsibleSettingsSection } from "../components/collapsible-section.slint";
+import { SettingsScrollView } from "scroll-view.slint";
+import { SettingsTheme } from "theme.slint";
+import { ActionSurface } from "../components/controls.slint";
+import { I18n } from "../i18n.slint";
+
+export component LanguageSettingsPage inherits SettingsScrollView {
+    callback language-selected(string);
+    in-out property <bool> language-open: true;
+    in-out property <bool> translations-open;
+    content-height: content.preferred-height;
+
+    content := VerticalLayout {
+        width: root.visible-width;
+        padding: 2px;
+        padding-right: 2px;
+        spacing: SettingsTheme.section-gap;
+        alignment: start;
+
+        CollapsibleSettingsSection {
+            title: "Язык / Language";
+            subtitle: I18n.i18n("settings.language.select.description", "Выбор языка интерфейса приложения.");
+            glyph: "\u{f0ac}";
+            expanded <=> root.language-open;
+            SettingsRow {
+                title: "Язык / Language";
+                Rectangle {
+                    width: max(220px, parent.width * 0.79);
+                    height: 38px;
+                    border-radius: 10px;
+                    background: SettingsTheme.field;
+                    border-width: 1px;
+                    border-color: SettingsTheme.field-border;
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 10px;
+                        spacing: 6px;
+                        SettingsText {
+                            text: I18n.locale == "ru" ? "RU — Русский" : I18n.locale == "en" ? "EN — English" : I18n.locale;
+                            horizontal-stretch: 1;
+                        }
+                        SettingsGlyph { text: "\u{f078}"; font-size: 10px; width: 15px; color: SettingsTheme.accent; }
+                    }
+                    TouchArea { mouse-cursor: pointer; clicked => { choices.show(); } }
+                    choices := PopupWindow {
+                        y: parent.height + 3px;
+                        width: parent.width;
+                        height: min(300px, I18n.languages.length * 34px + 8px);
+                        close-policy: close-on-click-outside;
+                        Rectangle {
+                            width: 100%; height: 100%; clip: true;
+                            background: SettingsTheme.popup;
+                            border-radius: 9px;
+                            border-width: 1px;
+                            border-color: SettingsTheme.border;
+                            HorizontalLayout { padding: 4px;
+                            locale-scroll := SettingsScrollView {
+                                content-height: I18n.languages.length * 34px;
+                            VerticalLayout {
+                                width: locale-scroll.visible-width;
+                                padding: 0px; spacing: 2px; alignment: start;
+                                for locale in I18n.languages: ActionSurface {
+                                    height: 32px;
+                                    vertical-stretch: 0;
+                                    label: locale.code;
+                                    HorizontalLayout {
+                                        padding-left: 10px;
+                                        SettingsText { text: (locale.code == "ru" ? "RU" : locale.code == "en" ? "EN" : locale.code) + " — " + locale.name; }
+                                    }
+                                    activated => { root.language-selected(locale.code); choices.close(); }
+                                }
+                            }
+                            }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        CollapsibleSettingsSection {
+            title: I18n.i18n("settings.language.custom", "Кастомные переводы");
+            subtitle: I18n.i18n("settings.language.custom.desc", "Внешние JSON-локали подключаются из папки языков после перезапуска.");
+            glyph: "\u{f07c}";
+            expanded <=> root.translations-open;
+            SettingsText {
+                text: I18n.i18n("settings.language.custom.help", "Для добавления языка поместите файл <код>.json в каталог локализации. Ключ _name задаёт название языка. Перезапустите приложение.");
+                wrap: word-wrap;
+                overflow: clip;
+                color: SettingsTheme.muted;
+            }
+            SettingsActionButton { text: I18n.i18n("settings.language.folder", "Открыть папку с языками"); enabled: false; }
+            SettingsText { text: I18n.i18n("settings.language.folder.unavailable", "Открытие внешней папки пока не подключено к presenter."); color: SettingsTheme.muted; }
+        }
+    }
+}

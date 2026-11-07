@@ -1,0 +1,1 @@
+{"id":"whisper","name":"Whisper ASR","version":"0.1.0","kind":"asr","entrypoint":"plugin.py","api_version":1}

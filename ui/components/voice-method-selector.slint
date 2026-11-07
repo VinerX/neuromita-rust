@@ -1,0 +1,67 @@
+import { SettingsTheme } from "../settings/theme.slint";
+import { SettingsText, SettingsGlyph } from "settings-kit.slint";
+import { ActionSurface } from "controls.slint";
+import { I18n } from "../i18n.slint";
+
+component VoiceMethodButton inherits ActionSurface {
+    in property <string> title;
+    in property <string> glyph;
+    height: 36px;
+    horizontal-stretch: 1;
+    label: root.title;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: root.selected ? SettingsTheme.accent : transparent;
+    background: root.selected ? SettingsTheme.accent : self.hovered ? SettingsTheme.button-hover : transparent;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 7px;
+        alignment: center;
+        SettingsGlyph {
+            text: root.glyph;
+            width: 15px;
+            font-size: 13px;
+            color: root.selected || root.hovered ? SettingsTheme.text : SettingsTheme.muted;
+        }
+        SettingsText {
+            text: root.title;
+            font-weight: root.selected ? 700 : 500;
+            font-size: 12px;
+            color: root.selected || root.hovered ? SettingsTheme.text : SettingsTheme.muted;
+        }
+    }
+}
+
+export component VoiceMethodSelector inherits Rectangle {
+    in property <int> selected;
+    callback changed(int);
+    height: 46px;
+    width: 300px;
+    horizontal-stretch: 0;
+    background: SettingsTheme.field;
+    border-color: SettingsTheme.border;
+    border-width: 1px;
+    border-radius: 11px;
+
+    HorizontalLayout {
+        padding: 4px;
+        spacing: 4px;
+        VoiceMethodButton {
+            title: "Telegram"; glyph: "\u{f1d8}";
+            selected: root.selected == 0;
+            activated => { root.changed(0); }
+        }
+        VoiceMethodButton {
+            title: I18n.i18n("voice.local", "Локальная"); glyph: "\u{f108}";
+            selected: root.selected == 1;
+            activated => { root.changed(1); }
+        }
+        VoiceMethodButton {
+            title: "API"; glyph: "\u{f0c2}";
+            selected: root.selected == 2;
+            activated => { root.changed(2); }
+        }
+    }
+}

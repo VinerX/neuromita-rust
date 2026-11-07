@@ -1,0 +1,1 @@
+{"id":"local_lm_reranker","name":"Local LM Reranker","version":"0.1.0","kind":"reranker","entrypoint":"plugin.py","api_version":1}

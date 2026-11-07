@@ -1,0 +1,176 @@
+import { Theme, Icons } from "../theme.slint";
+import { Label, Icon, ActionSurface } from "../components/controls.slint";
+import { LauncherMenu, LauncherMenuAction } from "../components/launcher-menu.slint";
+import { I18n } from "../i18n.slint";
+
+export struct ReleaseItem { title: string, date: string }
+export struct ComponentCard { title: string, value: string, update: string }
+
+component StatusCard inherits Rectangle {
+    in property <ComponentCard> model;
+    in property <image> icon;
+    in property <color> icon-color;
+    in property <length> icon-size: 28px;
+    in property <bool> checked;
+    callback toggled();
+    min-width: 0px; preferred-width: 0px; horizontal-stretch: 1;
+    background: Theme.panel; border-width: 1px; border-color: #b74b7d38; border-radius: 14px;
+    HorizontalLayout {
+        padding: 16px; padding-left: 20px; spacing: 14px;
+        VerticalLayout {
+            width: root.icon-size; padding: 0px; alignment: center;
+            Icon { width: root.icon-size; height: root.icon-size; source: root.icon; colorize: root.icon-color; }
+        }
+        VerticalLayout {
+            padding: 0px; spacing: 2px; alignment: center; min-width: 0px;
+            HorizontalLayout {
+                height: 19px; padding: 0px; spacing: 6px;
+                Label { text: root.model.title; color: Theme.accent-hover; font-size: 11.3333px; font-weight: 800; horizontal-stretch: 0; min-width: 0px; }
+                if root.model.update != "": Rectangle {
+                    width: 102px; height: 19px; background: #ffcf7d29;
+                    border-width: 1px; border-color: #ffcf7d8c; border-radius: 7px;
+                    Label { text: I18n.i18n("launcher.updates.new", "NEW") + " " + root.model.update; color: Theme.warning; font-size: 10px; font-weight: 800; horizontal-alignment: center; }
+                }
+                Rectangle { horizontal-stretch: 1; }
+            }
+            Label { height: 27px; min-width: 0px; text: root.model.value; font-size: Theme.status-size; font-weight: 700; }
+        }
+        if root.model.update != "": VerticalLayout {
+            width: 20px; padding: 0px; spacing: 0px;
+            ActionSurface {
+                width: 20px; height: 20px; border-radius: 5px;
+                label: root.model.title + " " + root.model.update;
+                accessible-role: checkbox; accessible-checkable: true; accessible-checked: root.checked;
+                background: root.checked ? Theme.accent : #0e101fa6;
+                border-width: 1px; border-color: #b74b7d8c;
+                if root.checked: Icon { width: 12px; height: 12px; source: Icons.check; colorize: white; }
+                activated => { root.toggled(); }
+            }
+            Rectangle { vertical-stretch: 1; }
+        }
+    }
+}
+
+component PlayButton inherits Rectangle {
+    in property <bool> game-running;
+    callback play();
+    callback menu-action(LauncherMenuAction);
+    height: 62px;
+    background: transparent;
+    HorizontalLayout {
+        padding: 0px; spacing: 0px;
+        ActionSurface {
+            border-radius: 0px; horizontal-stretch: 1;
+            border-top-left-radius: 16px; border-bottom-left-radius: 16px;
+            label: root.game-running ? I18n.i18n("launcher.actions.stop", "Остановить") : I18n.i18n("launcher.actions.play", "Играть");
+            background: self.pressed ? Theme.accent-pressed : self.hovered ? Theme.accent-hover : @linear-gradient(90deg, Theme.accent, #c0476f);
+            border-width: 1px; border-color: #c04c806b;
+            HorizontalLayout {
+                padding: 0px; spacing: 5px; alignment: center;
+                VerticalLayout {
+                    width: 13px; padding: 0px; alignment: center;
+                    if root.game-running: Label { text: "■"; font-size: 15px; color: white; }
+                    if !root.game-running: Icon { source: Icons.play; width: 13px; height: 16px; colorize: white; }
+                }
+                Label { text: root.game-running ? I18n.i18n("launcher.actions.stop", "Остановить") : I18n.i18n("launcher.actions.play", "Играть"); font-size: Theme.primary-size; font-weight: 800; color: white; horizontal-stretch: 0; }
+            }
+            activated => { root.play(); }
+        }
+        more-button := ActionSurface {
+            width: 74px; border-radius: 0px;
+            border-top-right-radius: 16px; border-bottom-right-radius: 16px;
+            label: I18n.i18n("launcher.actions.more", "Дополнительно");
+            background: self.hovered || self.pressed || menu.is-open ? @linear-gradient(90deg, #0e101ff5, #0e101ffa) : #ffcf7d1a;
+            border-width: 1px;
+            border-color: self.hovered || self.pressed || menu.is-open ? #b74b7d57 : #ffcf7d8c;
+            Icon { width: 14px; height: 14px; source: Icons.chevron-down; colorize: Theme.warning; }
+            Rectangle {
+                x: 0px; y: 0px; width: 1px; height: parent.height;
+                background: more-button.hovered || menu.is-open ? #ffffff24 : #ffffff1a;
+            }
+            menu := LauncherMenu {
+                x: parent.width - self.width; y: -self.height - 8px;
+                chosen(action) => { root.menu-action(action); }
+            }
+            activated => { if menu.is-open { menu.close(); } else { menu.show(); } }
+        }
+    }
+}
+
+component ReleasesPanel inherits Rectangle {
+    in property <[ReleaseItem]> releases;
+    callback open-releases();
+    height: 58px + root.releases.length * 28px;
+    background: Theme.panel; border-width: 1px; border-color: #b74b7d38; border-radius: 14px;
+    VerticalLayout {
+        padding: 16px; padding-top: 14px; padding-bottom: 14px; spacing: 6px;
+        HorizontalLayout {
+            height: 20px; padding: 0px; spacing: 8px;
+            Label { min-width: 0px; text: I18n.i18n("launcher.releases.title", "ПОСЛЕДНИЕ РЕЛИЗЫ"); color: Theme.accent-hover; font-size: 11.3333px; font-weight: 800; }
+            ActionSurface {
+                width: 78px; label: I18n.i18n("launcher.releases.all", "Все релизы");
+                Label { horizontal-alignment: right; text: parent.label; color: Theme.accent-hover; font-size: 13.3333px; font-weight: 600; }
+                activated => { root.open-releases(); }
+            }
+        }
+        Rectangle { height: 1px; background: #b74b7d4d; }
+        VerticalLayout {
+            padding: 0px; spacing: 4px;
+            for release in root.releases: ActionSurface {
+                height: 24px; label: release.title;
+                HorizontalLayout {
+                    padding: 0px; spacing: 8px;
+                    Label { min-width: 0px; text: release.title; font-size: 13.3333px; font-weight: 700; }
+                    Label { width: 77px; text: release.date; color: Theme.muted; font-size: 10.6667px; horizontal-alignment: right; }
+                }
+                activated => { root.open-releases(); }
+            }
+        }
+    }
+}
+
+export component HomePage inherits Rectangle {
+    in property <ComponentCard> backend;
+    in property <ComponentCard> client;
+    in property <[ReleaseItem]> releases;
+    in property <bool> backend-selected;
+    in property <bool> client-selected;
+    in property <bool> game-running;
+    callback toggle-backend();
+    callback toggle-client();
+    callback play();
+    callback menu-action(LauncherMenuAction);
+    callback open-releases();
+    clip: true;
+    background: Theme.background;
+    Image {
+        source: @image-url("../../assets/launcher_ui/bg.jpg");
+        width: max(parent.width, parent.height * 1468 / 1045);
+        height: max(parent.height, parent.width * 1045 / 1468);
+        x: (parent.width - self.width) * 0.68;
+        y: (parent.height - self.height) * 0.5;
+        image-fit: fill; image-rendering: smooth;
+    }
+    HorizontalLayout {
+        padding-left: 44px; padding-top: 42px; padding-right: 36px; padding-bottom: 32px; spacing: 24px;
+        VerticalLayout {
+            min-width: 0px; preferred-width: 0px; horizontal-stretch: 5;
+            padding: 0px; spacing: 14px;
+            Label { height: 54px; min-width: 0px; text: I18n.i18n("launcher.home.welcome", "Добро пожаловать!"); font-size: Theme.title-size; font-weight: 700; }
+            Label { height: 22px; min-width: 0px; text: I18n.i18n("launcher.home.subtitle", "Погрузись Miside по-новому с NeuroMita."); font-size: Theme.subtitle-size; color: Theme.muted; }
+            Rectangle { vertical-stretch: 1; }
+            HorizontalLayout {
+                height: 80px; spacing: 12px; padding: 0px;
+                StatusCard { model: root.backend; icon: Icons.rust; icon-color: Theme.rust; icon-size: 34px; checked: root.backend-selected; toggled => { root.toggle-backend(); } }
+                StatusCard { model: root.client; icon: Icons.unity; icon-color: #f0f0f0; icon-size: 34px; checked: root.client-selected; toggled => { root.toggle-client(); } }
+            }
+            PlayButton { game-running: root.game-running; play => { root.play(); } menu-action(action) => { root.menu-action(action); } }
+        }
+        VerticalLayout {
+            min-width: 0px; preferred-width: 0px; horizontal-stretch: 2;
+            padding: 0px; padding-bottom: 8px; spacing: 0px;
+            Rectangle { vertical-stretch: 1; }
+            ReleasesPanel { releases: root.releases; open-releases => { root.open-releases(); } }
+        }
+    }
+}

@@ -1,0 +1,446 @@
+import { SettingsTheme } from "../settings/theme.slint";
+import { SettingsText, SettingsGlyph, SettingsSectionHeading, SettingsTextField, SettingsToggle, SettingsCheckbox } from "../components/settings-kit.slint";
+import { ActionSurface } from "../components/controls.slint";
+import { ScrollView } from "std-widgets.slint";
+import { I18n } from "../i18n.slint";
+
+component AsrMiddle inherits VerticalLayout {
+    padding: 0px;
+    spacing: 0px;
+    alignment: center;
+    vertical-stretch: 1;
+    @children
+}
+
+
+export global AsrTheme {
+    out property <color> row-background: #141628eb;
+    out property <color> row-border: #ffffff12;
+    out property <color> status-danger: #d64545;
+    out property <length> control-width: 110px;
+    out property <length> card-padding-x: 16px;
+    out property <length> card-padding-y: 14px;
+    out property <length> column-breakpoint: 850px;
+}
+
+export struct AudioDeviceEntry { id: string, caption: string, backend: string }
+
+export global AsrUi {
+    in-out property <[AudioDeviceEntry]> device-entries;
+    in-out property <string> device-caption;
+    callback select-device(string);
+    in-out property <bool> recognition-available;
+    in-out property <bool> worker-idle: true;
+    in-out property <bool> worker-failed;
+    in-out property <bool> session-failed;
+    in-out property <bool> session-idle: true;
+    in-out property <bool> active;
+    in-out property <bool> draft-enabled;
+    in-out property <bool> runtime-ready;
+    in-out property <[string]> recognizers;
+    in-out property <string> recognizer;
+    in-out property <[string]> devices;
+    in-out property <string> device;
+    in-out property <[string]> audio-backends;
+    in-out property <string> audio-backend;
+    in-out property <string> status;
+    in-out property <bool> instant-send;
+    in-out property <bool> delayed-send;
+    in-out property <bool> merge-chat;
+    in-out property <bool> pause-while-speaking;
+    in-out property <string> send-delay;
+    in-out property <[string]> input-modes;
+    in-out property <string> input-mode;
+    in-out property <[string]> languages;
+    in-out property <string> language;
+    in-out property <string> language-hint;
+    in-out property <string> sample-rate;
+    in-out property <string> chunk-size;
+    in-out property <string> vad-threshold;
+    in-out property <string> silence-timeout;
+    in-out property <string> pre-buffer;
+    in-out property <string> max-speech;
+    in-out property <string> min-speech;
+    in-out property <int> mic-level;
+    in-out property <string> monitored-device;
+    in-out property <bool> testing;
+    callback step-number(string, float, float, float, int, bool) -> string;
+    callback persist();
+    callback recognizer-changed(string);
+    callback refresh-models();
+    callback refresh-devices();
+    callback session-toggle(bool);
+    callback push-to-talk(bool);
+    callback test-microphone(bool);
+    in-out property <string> worker-status;
+    in-out property <string> session-status;
+}
+
+
+component AsrCard inherits Rectangle {
+    background: SettingsTheme.panel;
+    border-width: 1px;
+    border-color: SettingsTheme.border;
+    border-radius: 14px;
+    @children
+}
+
+component AsrButton inherits ActionSurface {
+    in property <string> title;
+    in property <string> glyph;
+    in property <bool> primary;
+    label: root.title;
+    height: 38px;
+    border-radius: 9px;
+    border-width: 1px;
+    border-color: root.primary ? SettingsTheme.accent : SettingsTheme.button-border;
+    background: root.primary ? SettingsTheme.accent : self.hovered ? SettingsTheme.button-hover : SettingsTheme.button;
+    HorizontalLayout {
+        padding-left: 11px; padding-right: 11px; spacing: 7px; alignment: center;
+        if root.glyph != "": SettingsGlyph { text: root.glyph; width: 16px; font-size: 13px; color: root.enabled ? SettingsTheme.text : SettingsTheme.muted; }
+        if root.title != "": SettingsText {
+            text: root.title; font-weight: 650; font-size: 12px;
+            horizontal-alignment: center; color: root.enabled ? SettingsTheme.text : SettingsTheme.muted;
+        }
+    }
+}
+
+component AsrCardHeading inherits HorizontalLayout {
+    in property <string> title;
+    in property <string> glyph;
+    height: 36px; spacing: 8px; vertical-stretch: 0;
+    Rectangle { width: 36px; height: 36px; background: SettingsTheme.heading-icon-background; border-radius: 10px;
+        SettingsGlyph { text: root.glyph; width: 100%; height: 100%; color: SettingsTheme.accent; font-size: 18px; }
+    }
+    SettingsText { text: root.title; font-size: 15px; font-weight: 600; horizontal-stretch: 1; }
+}
+
+component AsrSelect inherits Rectangle {
+    in property <[string]> choices;
+    in property <string> selected;
+    in property <string> placeholder;
+    in property <bool> available: true;
+    callback chosen(string);
+    height: 38px; min-width: 0px; preferred-width: 0px;
+    background: SettingsTheme.field;
+    border-color: SettingsTheme.field-border; border-width: 1px; border-radius: 9px;
+    HorizontalLayout {
+        padding-left: 11px; padding-right: 10px; spacing: 8px;
+        SettingsText { text: root.selected == "" ? root.placeholder : root.selected; min-width: 0px; horizontal-stretch: 1; color: root.selected == "" ? SettingsTheme.muted : SettingsTheme.text; overflow: elide; }
+        SettingsGlyph { text: "\u{f078}"; width: 14px; color: SettingsTheme.accent; font-size: 11px; }
+    }
+    TouchArea { enabled: root.available && root.choices.length > 0; mouse-cursor: pointer; clicked => { choices-popup.show(); } }
+    choices-popup := PopupWindow {
+        y: root.height + 3px; width: root.width; height: min(240px, root.choices.length * 36px + 8px);
+        close-policy: close-on-click-outside;
+        Rectangle { width: 100%; height: 100%; background: SettingsTheme.popup; border-color: SettingsTheme.border; border-width: 1px; border-radius: 9px;
+            ScrollView {
+                width: 100%; height: 100%; content-width: self.visible-width;
+                VerticalLayout { padding: 4px; spacing: 2px; alignment: start;
+                    for choice in root.choices: ActionSurface { label: choice; height: 32px; border-radius: 6px;
+                        background: self.hovered ? SettingsTheme.button-hover : transparent;
+                        HorizontalLayout { padding-left: 10px; SettingsText { text: choice; overflow: elide; min-width: 0px; } }
+                        activated => { root.chosen(choice); choices-popup.close(); }
+                    }
+                }
+            }
+        }
+    }
+}
+
+component AsrTopField inherits VerticalLayout {
+    in property <string> title;
+    spacing: 7px; padding: 0px; min-width: 0px;
+    SettingsText { text: root.title; height: 18px; color: SettingsTheme.muted; font-size: 12px; }
+    @children
+}
+
+component AsrStatus inherits Rectangle {
+    property <color> ink: AsrUi.worker-failed || AsrUi.session-failed ? AsrTheme.status-danger : AsrUi.active && AsrUi.runtime-ready ? SettingsTheme.status-success : !AsrUi.worker-idle || !AsrUi.session-idle ? SettingsTheme.accent : SettingsTheme.muted;
+    height: 38px; min-width: 0px;
+    background: root.ink.with-alpha(0.10); border-width: 1px; border-color: root.ink.with-alpha(0.35); border-radius: 9px;
+    HorizontalLayout { padding-left: 12px; padding-right: 12px; spacing: 8px;
+        AsrMiddle { width: 9px;
+            Rectangle { width: 9px; height: 9px; border-radius: 5px; background: root.ink; }
+        }
+        SettingsText { text: AsrUi.status == "" ? I18n.i18n("asr.status.unavailable", "—") : AsrUi.status; color: root.ink; horizontal-stretch: 1; }
+    }
+}
+
+component AsrRowCopy inherits VerticalLayout {
+    spacing: 3px;
+    padding: 0px;
+    min-width: 0px;
+    horizontal-stretch: 1;
+    vertical-stretch: 1;
+    alignment: center;
+    @children
+}
+
+component AsrToggleSetting inherits Rectangle {
+    in property <string> title;
+    in property <string> hint;
+    in property <string> glyph;
+    in property <bool> checked;
+    callback changed(bool);
+    min-height: 52px; vertical-stretch: 0; border-radius: 10px;
+    border-width: 1px; border-color: AsrTheme.row-border;
+    background: AsrTheme.row-background;
+    HorizontalLayout { padding-left: 10px; padding-right: 10px; padding-top: 8px; padding-bottom: 8px; spacing: 10px;
+        AsrMiddle { width: 36px;
+            Rectangle { width: 36px; height: 36px; border-radius: 10px; background: SettingsTheme.heading-icon-background;
+                SettingsGlyph { text: root.glyph; width: 100%; height: 100%; font-size: 17px; color: SettingsTheme.accent; }
+            }
+        }
+        AsrRowCopy {
+            SettingsText { text: root.title; font-size: 13px; font-weight: 600; wrap: word-wrap; overflow: clip; }
+            SettingsText { text: root.hint; color: SettingsTheme.muted; font-size: 12px; wrap: word-wrap; overflow: clip; }
+        }
+        AsrMiddle { width: 20px;
+            SettingsCheckbox { checked: root.checked; enabled: AsrUi.draft-enabled; toggled(value) => { root.changed(value); } }
+        }
+    }
+}
+
+component AsrParameter inherits Rectangle {
+    in property <string> title;
+    in property <string> hint;
+    in property <string> glyph;
+    in-out property <string> value;
+    in property <bool> active: true;
+    in property <bool> requires-model: false;
+    in property <float> minimum: 0;
+    in property <float> maximum: 1;
+    in property <float> step: 0.05;
+    in property <int> decimals: 2;
+    property <bool> can-edit: root.active && AsrUi.draft-enabled && (!root.requires-model || AsrUi.recognition-available);
+    callback committed(string);
+    min-height: 52px; vertical-stretch: 0; border-radius: 10px; border-width: 1px; border-color: AsrTheme.row-border;
+    background: AsrTheme.row-background;
+    HorizontalLayout { padding-left: 10px; padding-right: 10px; padding-top: 8px; padding-bottom: 8px; spacing: 10px;
+        AsrMiddle { width: 36px;
+            Rectangle { width: 36px; height: 36px; border-radius: 10px; background: SettingsTheme.heading-icon-background;
+                SettingsGlyph { text: root.glyph; width: 100%; height: 100%; font-size: 17px; color: SettingsTheme.accent; }
+            }
+        }
+        AsrRowCopy {
+            SettingsText { text: root.title; font-size: 13px; font-weight: 600; wrap: word-wrap; overflow: clip; }
+            SettingsText { text: root.hint; color: SettingsTheme.muted; font-size: 12px; wrap: word-wrap; overflow: clip; }
+        }
+        AsrMiddle { width: AsrTheme.control-width;
+            Rectangle { width: AsrTheme.control-width; height: 36px; border-width: 1px; border-color: SettingsTheme.border; border-radius: 8px; background: SettingsTheme.input;
+                HorizontalLayout { padding-left: 8px; padding-right: 2px; spacing: 2px;
+                    TextInput { text <=> root.value; single-line: true; vertical-alignment: center; horizontal-stretch: 1; min-width: 0px;
+                        enabled: root.can-edit; color: SettingsTheme.text; font-family: SettingsTheme.font-family; font-size: 12px;
+                        accepted => { root.committed(root.value); }
+                    }
+                    VerticalLayout { width: 18px; spacing: 0px;
+                        ActionSurface { enabled: root.can-edit; label: "+"; min-height: 0px; vertical-stretch: 1;
+                            SettingsGlyph { text: "\u{f077}"; width: 100%; height: 100%; font-size: 8px; color: SettingsTheme.muted; }
+                            activated => { root.value = AsrUi.step-number(root.value, root.minimum, root.maximum, root.step, root.decimals, true); root.committed(root.value); }
+                        }
+                        ActionSurface { enabled: root.can-edit; label: "−"; min-height: 0px; vertical-stretch: 1;
+                            SettingsGlyph { text: "\u{f078}"; width: 100%; height: 100%; font-size: 8px; color: SettingsTheme.muted; }
+                            activated => { root.value = AsrUi.step-number(root.value, root.minimum, root.maximum, root.step, root.decimals, false); root.committed(root.value); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+component AsrToolbar inherits AsrCard {
+    VerticalLayout { padding-left: AsrTheme.card-padding-x; padding-right: AsrTheme.card-padding-x; padding-top: AsrTheme.card-padding-y; padding-bottom: AsrTheme.card-padding-y; spacing: 9px;
+        if root.width >= AsrTheme.column-breakpoint: HorizontalLayout { height: 44px; spacing: 15px;
+            HorizontalLayout { horizontal-stretch: 1; spacing: 12px;
+                AsrMiddle { width: 42px;
+                    SettingsToggle { checked: AsrUi.active; enabled: (AsrUi.recognition-available && AsrUi.runtime-ready) || AsrUi.active; toggled(v) => { AsrUi.session-toggle(v); } }
+                }
+                VerticalLayout { spacing: 2px; alignment: center;
+                    SettingsText { text: I18n.i18n("asr.active", "Микрофон активен"); font-size: 13px; font-weight: 650; }
+                    SettingsText { text: AsrUi.active ? I18n.i18n("asr.recognition.enabled", "Распознавание включено") : I18n.i18n("asr.recognition.disabled", "Распознавание выключено"); font-size: 12px; color: SettingsTheme.muted; }
+                }
+            }
+            HorizontalLayout { horizontal-stretch: 2; spacing: 10px; alignment: end;
+                SettingsText { text: I18n.i18n("asr.status", "Статус"); color: SettingsTheme.muted; }
+                AsrStatus { horizontal-stretch: 1; }
+                AsrButton { title: I18n.i18n("asr.restart", "Перезапустить"); glyph: "\u{f2f9}"; enabled: false; }
+            }
+        }
+        if root.width < AsrTheme.column-breakpoint: VerticalLayout { spacing: 10px;
+            HorizontalLayout { spacing: 12px; height: 36px;
+                AsrMiddle { width: 42px;
+                    SettingsToggle { checked: AsrUi.active; enabled: (AsrUi.recognition-available && AsrUi.runtime-ready) || AsrUi.active; toggled(v) => { AsrUi.session-toggle(v); } }
+                }
+                SettingsText { text: I18n.i18n("asr.active", "Микрофон активен"); font-weight: 650; horizontal-stretch: 1; }
+                SettingsText { text: AsrUi.active ? I18n.i18n("asr.recognition.enabled", "Распознавание включено") : I18n.i18n("asr.recognition.disabled", "Распознавание выключено"); color: SettingsTheme.muted; }
+            }
+            HorizontalLayout { spacing: 9px;
+                AsrStatus { horizontal-stretch: 1; }
+                AsrButton { title: I18n.i18n("asr.restart", "Перезапустить"); glyph: "\u{f2f9}"; enabled: false; }
+            }
+        }
+        if AsrUi.input-mode == "Нажать для разговора": Rectangle {
+            height: 38px;
+            min-width: 180px;
+            background: SettingsTheme.button;
+            border-radius: 9px;
+            border-width: 1px;
+            border-color: SettingsTheme.button-border;
+            SettingsText {
+                text: I18n.i18n("asr.ptt", "Удерживайте для записи");
+                color: AsrUi.active ? SettingsTheme.text : SettingsTheme.muted;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+            TouchArea {
+                enabled: AsrUi.active;
+                mouse-cursor: pointer;
+                changed pressed => { AsrUi.push-to-talk(self.pressed); }
+            }
+        }
+        Rectangle { height: 1px; background: SettingsTheme.border; vertical-stretch: 0; }
+        if root.width >= AsrTheme.column-breakpoint: HorizontalLayout { spacing: 14px; vertical-stretch: 0;
+            AsrTopField { horizontal-stretch: 3; title: I18n.i18n("asr.recognizer", "Модель распознавания");
+                HorizontalLayout { spacing: 7px;
+                    AsrSelect { horizontal-stretch: 1; choices: AsrUi.recognizers; selected: AsrUi.recognizer; placeholder: AsrUi.recognizers.length == 0 ? I18n.i18n("asr.models.empty", "Нет установленных моделей") : I18n.i18n("asr.models.choose", "Выберите модель распознавания"); chosen(v) => { AsrUi.recognizer = v; AsrUi.recognizer-changed(v); } }
+                    AsrButton { width: 38px; title: ""; glyph: "\u{f021}"; enabled: true; activated => { AsrUi.refresh-models(); } }
+                    AsrButton { title: I18n.i18n("asr.catalog", "Каталог моделей"); glyph: "\u{f1b3}"; enabled: false; }
+                }
+            }
+            AsrTopField { horizontal-stretch: 4; title: I18n.i18n("asr.input-device", "Устройство ввода");
+                HorizontalLayout { spacing: 7px;
+                    AsrSelect { horizontal-stretch: 1; choices: AsrUi.devices; selected: AsrUi.device-caption; placeholder: AsrUi.devices.length == 0 ? I18n.i18n("asr.device.empty", "Нет доступных устройств") : I18n.i18n("asr.device.choose", "Выберите устройство ввода"); chosen(v) => { AsrUi.select-device(v); } }
+                    AsrButton { width: 38px; title: ""; glyph: "\u{f021}"; enabled: true; activated => { AsrUi.refresh-devices(); } }
+                }
+            }
+            AsrTopField { horizontal-stretch: 2; title: I18n.i18n("asr.audio-backend", "Аудиобэкенд");
+                AsrSelect { choices: AsrUi.audio-backends; selected: AsrUi.audio-backend; placeholder: "—"; chosen(v) => { AsrUi.audio-backend = v; AsrUi.persist(); } }
+            }
+        }
+        if root.width < AsrTheme.column-breakpoint: VerticalLayout { spacing: 12px;
+            AsrTopField { title: I18n.i18n("asr.recognizer", "Модель распознавания");
+                HorizontalLayout { spacing: 7px;
+                    AsrSelect { horizontal-stretch: 1; choices: AsrUi.recognizers; selected: AsrUi.recognizer; placeholder: AsrUi.recognizers.length == 0 ? I18n.i18n("asr.models.empty", "Нет установленных моделей") : I18n.i18n("asr.models.choose", "Выберите модель распознавания"); chosen(v) => { AsrUi.recognizer = v; AsrUi.recognizer-changed(v); } }
+                    AsrButton { width: 38px; title: ""; glyph: "\u{f021}"; enabled: true; activated => { AsrUi.refresh-models(); } }
+                    AsrButton { title: I18n.i18n("asr.catalog", "Каталог моделей"); glyph: "\u{f1b3}"; enabled: false; }
+                }
+            }
+            AsrTopField { title: I18n.i18n("asr.input-device", "Устройство ввода");
+                HorizontalLayout { spacing: 7px;
+                    AsrSelect { horizontal-stretch: 1; choices: AsrUi.devices; selected: AsrUi.device-caption; placeholder: AsrUi.devices.length == 0 ? I18n.i18n("asr.device.empty", "Нет доступных устройств") : I18n.i18n("asr.device.choose", "Выберите устройство ввода"); chosen(v) => { AsrUi.select-device(v); } }
+                    AsrButton { width: 38px; title: ""; glyph: "\u{f021}"; enabled: true; activated => { AsrUi.refresh-devices(); } }
+                }
+            }
+            AsrTopField { title: I18n.i18n("asr.audio-backend", "Аудиобэкенд");
+                AsrSelect { choices: AsrUi.audio-backends; selected: AsrUi.audio-backend; placeholder: "—"; chosen(v) => { AsrUi.audio-backend = v; AsrUi.persist(); } }
+            }
+        }
+    }
+}
+
+component AsrBehaviorCard inherits AsrCard {
+    VerticalLayout { padding-left: AsrTheme.card-padding-x; padding-right: AsrTheme.card-padding-x; padding-top: AsrTheme.card-padding-y; padding-bottom: AsrTheme.card-padding-y; spacing: 9px; alignment: start;
+        AsrCardHeading { title: I18n.i18n("asr.behavior", "Поведение и отправка"); glyph: "\u{f1de}"; }
+        AsrToggleSetting { title: I18n.i18n("asr.instant", "Мгновенная отправка"); hint: I18n.i18n("asr.instant.note", "Отправлять распознанный текст сразу."); glyph: "\u{f0e7}"; checked: AsrUi.instant-send; changed(v) => { AsrUi.instant-send = v; AsrUi.persist(); } }
+        AsrToggleSetting { title: I18n.i18n("asr.delay", "Отправлять с паузой"); hint: I18n.i18n("asr.delay.note", "Новая речь или печать перезапускает отсчёт."); glyph: "\u{f017}"; checked: AsrUi.delayed-send; changed(v) => { AsrUi.delayed-send = v; AsrUi.persist(); } }
+        if AsrUi.delayed-send: AsrParameter { minimum: 0.5; maximum: 30; step: 0.5; decimals: 1; title: I18n.i18n("asr.pause", "Пауза до отправки"); hint: I18n.i18n("asr.pause.note", "В секундах"); glyph: "\u{f252}"; value <=> AsrUi.send-delay; committed(value) => { AsrUi.persist(); } }
+        AsrToggleSetting { title: I18n.i18n("asr.merge-chat", "Добавлять текст из чата"); hint: I18n.i18n("asr.merge-chat.note", "Объединять речь с текстом в поле ввода."); glyph: "\u{f4ad}"; checked: AsrUi.merge-chat; changed(v) => { AsrUi.merge-chat = v; AsrUi.persist(); } }
+        AsrToggleSetting { title: I18n.i18n("asr.pause-speaking", "Приостанавливать распознавание, пока Мита говорит"); hint: I18n.i18n("asr.pause-speaking.note", "Не распознавать речь во время ответа Миты."); glyph: "\u{f04c}"; checked: AsrUi.pause-while-speaking; changed(v) => { AsrUi.pause-while-speaking = v; AsrUi.persist(); } }
+        Rectangle { min-height: 54px; border-radius: 10px; border-width: 1px; border-color: SettingsTheme.border; background: AsrTheme.row-background; vertical-stretch: 0;
+            HorizontalLayout { padding-left: 10px; padding-right: 12px; spacing: 10px;
+                AsrMiddle { width: 36px;
+                    Rectangle { width: 36px; height: 36px; border-radius: 10px; background: SettingsTheme.heading-icon-background;
+                        SettingsGlyph { text: "\u{f11c}"; width: 100%; height: 100%; color: SettingsTheme.accent; font-size: 17px; }
+                    }
+                }
+                VerticalLayout { spacing: 3px; alignment: center; horizontal-stretch: 1;
+                    SettingsText { text: I18n.i18n("asr.input-mode", "Режим ввода"); font-size: 13px; font-weight: 600; }
+                    SettingsText { text: I18n.i18n("asr.input-mode.note", "Способ активации распознавания речи."); font-size: 12px; color: SettingsTheme.muted; }
+                }
+                AsrMiddle { width: 215px;
+                    AsrSelect { width: 215px; selected: AsrUi.input-mode; choices: AsrUi.input-modes; placeholder: "—"; chosen(v) => { AsrUi.input-mode = v; AsrUi.persist(); } }
+                }
+            }
+        }
+    }
+}
+
+component AsrRecognitionCard inherits AsrCard {
+    VerticalLayout { padding-left: AsrTheme.card-padding-x; padding-right: AsrTheme.card-padding-x; padding-top: AsrTheme.card-padding-y; padding-bottom: AsrTheme.card-padding-y; spacing: 9px; alignment: start;
+        AsrCardHeading { title: I18n.i18n("asr.parameters", "Параметры распознавания"); glyph: "\u{f83e}"; }
+        AsrTopField { title: I18n.i18n("asr.language", "Язык распознавания");
+            AsrSelect { available: AsrUi.recognition-available; selected: AsrUi.language; choices: AsrUi.languages; placeholder: I18n.i18n("asr.language.choose", "Выберите модель распознавания"); chosen(v) => { AsrUi.language = v; AsrUi.persist(); } }
+        }
+        SettingsText { text: I18n.i18n("asr.language.note", "Язык сохраняется отдельно для каждой модели."); color: SettingsTheme.muted; font-size: 12px; height: 17px; }
+        SettingsText { text: AsrUi.recognition-available ? AsrUi.language-hint : I18n.i18n("asr.language.choose", "Выберите модель распознавания"); color: SettingsTheme.muted; font-size: 12px; min-height: 17px; wrap: word-wrap; vertical-stretch: 0; }
+        AsrParameter { requires-model: true; minimum: 16000; maximum: 16000; step: 1000; decimals: 0; title: I18n.i18n("asr.sample-rate", "Частота дискретизации"); hint: I18n.i18n("asr.sample-rate.note", "Фиксированная частота: 16000 Гц."); glyph: "\u{f83e}"; value: AsrUi.sample-rate; active: false; }
+        AsrParameter { requires-model: true; minimum: 128; maximum: 4096; step: 128; decimals: 0; title: I18n.i18n("asr.chunk", "Размер чанка"); hint: I18n.i18n("asr.chunk.note", "Размер аудиоблока в сэмплах."); glyph: "\u{f1c0}"; value <=> AsrUi.chunk-size; committed(value) => { AsrUi.persist(); } }
+        AsrParameter { requires-model: true; title: I18n.i18n("asr.threshold", "Порог голосовой активности"); hint: I18n.i18n("asr.threshold.note", "Порог голосовой активности."); glyph: "\u{f83e}"; value <=> AsrUi.vad-threshold; committed(value) => { AsrUi.persist(); } }
+        AsrParameter { requires-model: true; minimum: 0.05; maximum: 10; title: I18n.i18n("asr.silence", "Тишина (сек)"); hint: I18n.i18n("asr.silence.note", "Пауза для окончания фразы. Менее 0,4 с может обрезать речь."); glyph: "\u{f017}"; value <=> AsrUi.silence-timeout; committed(value) => { AsrUi.persist(); } }
+        AsrParameter { requires-model: true; minimum: 0; maximum: 5; title: I18n.i18n("asr.pre-buffer", "Предбуфер (сек)"); hint: I18n.i18n("asr.pre-buffer.note", "Аудио до начала речи."); glyph: "\u{f04a}"; value <=> AsrUi.pre-buffer; committed(value) => { AsrUi.persist(); } }
+        AsrParameter { requires-model: true; minimum: 1; maximum: 120; step: 1; decimals: 1; title: I18n.i18n("asr.max-speech", "Макс. речь (сек)"); hint: I18n.i18n("asr.max-speech.note", "Максимальная длительность одной фразы."); glyph: "\u{f253}"; value <=> AsrUi.max-speech; committed(value) => { AsrUi.persist(); } }
+        AsrParameter { requires-model: true; minimum: 0; maximum: 3; title: I18n.i18n("asr.min-speech", "Мин. речь (сек)"); hint: I18n.i18n("asr.min-speech.note", "Отсеивать щелчки и короткие звуки. 0 — отключить."); glyph: "\u{f0b0}"; value <=> AsrUi.min-speech; committed(value) => { AsrUi.persist(); } }
+        HorizontalLayout { height: 38px; spacing: 8px; vertical-stretch: 0;
+            AsrButton { title: I18n.i18n("asr.apply", "Применить"); glyph: "\u{f00c}"; horizontal-stretch: 1; enabled: AsrUi.recognition-available; activated => { AsrUi.persist(); } }
+            AsrButton { title: I18n.i18n("asr.reset", "Сбросить"); glyph: "\u{f0e2}"; horizontal-stretch: 1; enabled: false; }
+        }
+    }
+}
+
+component AsrMonitorCard inherits AsrCard {
+    VerticalLayout { padding-left: AsrTheme.card-padding-x; padding-right: AsrTheme.card-padding-x; padding-top: AsrTheme.card-padding-y; padding-bottom: AsrTheme.card-padding-y; spacing: 9px; alignment: start;
+        HorizontalLayout { spacing: 12px; height: 50px; vertical-stretch: 0;
+            Rectangle { width: 43px; height: 43px; border-radius: 12px; background: SettingsTheme.heading-icon-background;
+                SettingsGlyph { text: "\u{f130}"; width: 100%; height: 100%; font-size: 22px; color: SettingsTheme.accent; }
+            }
+            VerticalLayout { spacing: 3px; alignment: center; horizontal-stretch: 1;
+                SettingsText { text: I18n.i18n("asr.microphone-level", "Уровень микрофона"); font-size: 15px; font-weight: 600; }
+                SettingsText { text: I18n.i18n("asr.monitor.note", "Во время теста вы слышите себя. Распознавание временно приостановлено."); color: SettingsTheme.muted; font-size: 12px; wrap: word-wrap; overflow: clip; }
+            }
+            AsrButton { title: AsrUi.testing ? I18n.i18n("asr.monitor.stop", "Остановить тест") : I18n.i18n("asr.monitor.start", "Проверить микрофон"); glyph: "\u{f025}"; enabled: AsrUi.testing || (AsrUi.draft-enabled && AsrUi.device != "" && AsrUi.audio-backend != ""); activated => { AsrUi.test-microphone(!AsrUi.testing); } }
+        }
+        meter := Rectangle {
+            height: 30px;
+            min-width: 0px;
+            background: transparent;
+            property <int> segments: min(120, max(12, self.width / 9px));
+            HorizontalLayout {
+                padding-top: 6px;
+                padding-bottom: 6px;
+                padding-left: 1px;
+                padding-right: 1px;
+                spacing: 3px;
+                for segment in meter.segments: Rectangle {
+                    horizontal-stretch: 1;
+                    min-width: 0px;
+                    border-radius: 3px;
+                    background: (segment + 1) * 100 <= AsrUi.mic-level * meter.segments
+                        ? SettingsTheme.accent : SettingsTheme.muted;
+                    opacity: (segment + 1) * 100 <= AsrUi.mic-level * meter.segments ? 1 : 0.16;
+                }
+            }
+        }
+        SettingsText { text: AsrUi.monitored-device == "" ? I18n.i18n("asr.monitor.no-device", "Устройство для проверки не выбрано") : AsrUi.monitored-device; color: SettingsTheme.muted; font-size: 12px; height: 19px; }
+    }
+}
+
+export component AsrSettingsPage inherits VerticalLayout {
+    spacing: 14px;
+    padding: 0px;
+    min-width: 0px;
+    horizontal-stretch: 1;
+    alignment: start;
+
+    AsrToolbar { vertical-stretch: 0; }
+    if root.width >= AsrTheme.column-breakpoint: HorizontalLayout { spacing: 14px; vertical-stretch: 0;
+        AsrBehaviorCard { horizontal-stretch: 1; min-width: 0px; }
+        AsrRecognitionCard { horizontal-stretch: 1; min-width: 0px; }
+    }
+    if root.width < AsrTheme.column-breakpoint: VerticalLayout { spacing: 14px; vertical-stretch: 0;
+        AsrBehaviorCard {}
+        AsrRecognitionCard {}
+    }
+    AsrMonitorCard { vertical-stretch: 0; }
+}

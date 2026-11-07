@@ -19,21 +19,20 @@ use uuid::Uuid;
 
 use crate::{
     character::CharacterId,
-    generation::GenerationPreset,
+    identity::EventId,
     lifecycle::Lifecycle,
     request::{
-        ProcessingStage, ReplyRequest, RequestHandle, RequestId, RequestOutcome, RequestSnapshot,
-        RequestSource, RequestState, UserInput,
+        DiagnosticLookupError, DiagnosticScope, DiagnosticSection, InitiateRequest,
+        ProcessingStage, ReactRequest, ReplyRequest, RequestHandle, RequestId, RequestOutcome,
+        RequestSnapshot, RequestSource, RequestState, SubmitError,
     },
     runtime::{self, ApiBindings},
-    settings::{VoiceSettings, Volume},
-    voice::{VoiceOptions, VoicePlan},
+    settings::{SettingsError, VoiceSettings, Volume},
+    timeline::conversation::{ConversationAudience, ConversationMessage, ConversationSpeaker},
 };
 
 pub struct ServerConfig {
     pub bind: SocketAddr,
-    pub test_character: CharacterId,
-    pub preset: GenerationPreset,
     pub max_clients: NonZeroUsize,
     pub outbound_capacity: NonZeroUsize,
     pub max_command_bytes: NonZeroUsize,
@@ -41,15 +40,9 @@ pub struct ServerConfig {
 }
 
 impl ServerConfig {
-    pub fn test_protocol(
-        bind: SocketAddr,
-        test_character: CharacterId,
-        preset: GenerationPreset,
-    ) -> Self {
+    pub fn local_control(bind: SocketAddr) -> Self {
         Self {
             bind,
-            test_character,
-            preset,
             max_clients: NonZeroUsize::new(16).expect("positive"),
             outbound_capacity: NonZeroUsize::new(64).expect("positive"),
             max_command_bytes: NonZeroUsize::new(65536).expect("positive"),
@@ -102,6 +95,12 @@ pub struct ServerLifecycle {
 }
 impl ServerLifecycle {
     pub async fn bind(config: ServerConfig) -> io::Result<(Self, ServerHandle)> {
+        if !config.bind.ip().is_loopback() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "LocalControl requires a loopback bind address",
+            ));
+        }
         let listener = TcpListener::bind(config.bind).await?;
         let address = listener.local_addr()?;
         let snapshot = ServerSnapshot {
@@ -142,13 +141,20 @@ impl ServerLifecycle {
         api: Arc<ApiBindings>,
     ) -> io::Result<()> {
         let clients_stop = CancellationToken::new();
-        let mut clients = JoinSet::new();
+        let mut clients: JoinSet<io::Result<()>> = JoinSet::new();
         self.state.change(|state| state.running = true);
         let mut failure = None;
         loop {
             tokio::select! {
                 biased;
                 _ = stop.cancelled() => break,
+                result = clients.join_next(), if !clients.is_empty() => {
+                    match result {
+                        Some(Ok(Err(error))) => self.state.change(|state| state.last_error = Some(Arc::from(error.to_string()))),
+                        Some(Err(error)) => self.state.change(|state| state.last_error = Some(Arc::from(error.to_string()))),
+                        _ => {}
+                    }
+                }
                 connected = self.listener.accept() => {
                     match connected {
                         Ok((stream, _)) => {
@@ -158,19 +164,13 @@ impl ServerLifecycle {
                             let config = Arc::clone(&self.config);
                             let stop = clients_stop.clone();
                             let api = Arc::clone(&api);
+                            let server = ServerHandle { address: self.listener.local_addr()?, state: Arc::clone(&self.state) };
                             clients.spawn(async move {
                                 let _connected = Connected(state);
-                                client(stream, config, stop, api).await
+                                client(stream, config, stop, api, server).await
                             });
                         }
                         Err(error) => { failure = Some(error); break; }
-                    }
-                }
-                result = clients.join_next(), if !clients.is_empty() => {
-                    match result {
-                        Some(Ok(Err(error))) => self.state.change(|state| state.last_error = Some(Arc::from(error.to_string()))),
-                        Some(Err(error)) => self.state.change(|state| state.last_error = Some(Arc::from(error.to_string()))),
-                        _ => {}
                     }
                 }
             }
@@ -193,21 +193,190 @@ impl Drop for Connected {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "command", rename_all = "snake_case", deny_unknown_fields)]
-enum Command {
-    Test,
+macro_rules! commands {
+    ($($variant:ident { $($(#[$attr:meta])* $field:ident : $ty:ty),* $(,)? }),* $(,)?) => {
+        #[derive(Debug, Serialize, Deserialize)]
+        #[serde(tag = "command", rename_all = "snake_case", deny_unknown_fields)]
+        enum Command { $($variant { $($(#[$attr])* $field: $ty),* }),* }
+
+        #[derive(Clone, Copy, Serialize, Deserialize)]
+        #[serde(rename_all = "snake_case")]
+        enum Method { $($variant),* }
+
+        impl Method { const ALL: &'static [Self] = &[$(Self::$variant),*]; }
+    };
+}
+
+commands! {
+    Ping {}, Methods {}, ServerStatus {},
+    PublishMessage {
+        event_id: Uuid,
+        occurred_at_unix_ms: u64,
+        speaker: ConversationSpeaker,
+        content: Value,
+        #[serde(flatten)]
+        audience: WireAudience,
+    },
     Reply {
         character: CharacterId,
-        text: String,
+        message_id: Uuid,
+        #[serde(flatten)]
+        audience: WireAudience,
+    },
+    React {
+        character: CharacterId,
+        event_id: Uuid,
+        #[serde(default)]
+        instruction: String,
+        #[serde(flatten)]
+        audience: WireAudience,
+    },
+    Initiate {
+        character: CharacterId,
+        #[serde(default)]
+        instruction: String,
+        #[serde(flatten)]
+        audience: WireAudience,
     },
     Cancel {
         request_id: Uuid,
     },
-    Settings,
+    Diagnostics {
+        character: CharacterId,
+        request_id: Uuid,
+        #[serde(default)]
+        section: Option<String>,
+    },
+    DiagnosticsRecent {
+        character: CharacterId,
+        #[serde(default)]
+        limit: Option<usize>,
+    },
+    DiagnosticsErrors {
+        character: CharacterId,
+        #[serde(default)]
+        limit: Option<usize>,
+    },
+    Settings {},
     SetVolume {
         value: Volume,
     },
+}
+
+#[derive(Clone, Copy, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum ErrorCode {
+    MalformedJson,
+    InvalidCommand,
+    UnknownCommand,
+    InvalidValue,
+    CommandIdConflict,
+    QueueFull,
+    ReceiptCapacity,
+    OwnershipDenied,
+    DiagnosticsUnavailable,
+    DiagnosticsNotFound,
+    DiagnosticsExpired,
+    CoreUnavailable,
+    SettingsConflict,
+    SettingsStorage,
+}
+
+fn error_response(id: Option<Uuid>, code: ErrorCode, message: impl std::fmt::Display) -> Value {
+    let mut value = json!({"type":"error", "code":code, "error":message.to_string()});
+    if let Some(id) = id {
+        value["command_id"] = json!(id);
+    }
+    value
+}
+
+fn decode(line: &str) -> Result<Envelope, Value> {
+    match serde_json::from_str::<Envelope>(line) {
+        Ok(envelope) => Ok(envelope),
+        Err(error) => {
+            let value = serde_json::from_str::<Value>(line);
+            let id = serde_json::from_str::<CommandCorrelation>(line)
+                .ok()
+                .and_then(|v| v.command_id);
+            let code = match &value {
+                Err(_) => ErrorCode::MalformedJson,
+                Ok(value)
+                    if value
+                        .get("command")
+                        .and_then(Value::as_str)
+                        .is_some_and(|name| {
+                            serde_json::from_value::<Method>(json!(name)).is_err()
+                        }) =>
+                {
+                    ErrorCode::UnknownCommand
+                }
+                _ => ErrorCode::InvalidCommand,
+            };
+            Err(error_response(id, code, error))
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct CommandCorrelation {
+    command_id: Option<Uuid>,
+}
+
+fn settings_code(error: &SettingsError) -> ErrorCode {
+    match error {
+        SettingsError::Validation(_) => ErrorCode::InvalidValue,
+        SettingsError::Conflict { .. } => ErrorCode::SettingsConflict,
+        SettingsError::Storage(_) => ErrorCode::SettingsStorage,
+        SettingsError::Uninitialized | SettingsError::Stopped => ErrorCode::CoreUnavailable,
+    }
+}
+
+fn diagnostic_code(error: &DiagnosticLookupError) -> ErrorCode {
+    match error {
+        DiagnosticLookupError::Unavailable | DiagnosticLookupError::Stopped => {
+            ErrorCode::DiagnosticsUnavailable
+        }
+        DiagnosticLookupError::NotFound(_) | DiagnosticLookupError::Empty => {
+            ErrorCode::DiagnosticsNotFound
+        }
+        DiagnosticLookupError::Expired(_) => ErrorCode::DiagnosticsExpired,
+        DiagnosticLookupError::OwnershipDenied(_) => ErrorCode::OwnershipDenied,
+    }
+}
+
+fn submit_code(error: &SubmitError) -> ErrorCode {
+    match error {
+        SubmitError::InvalidTargetEvent => ErrorCode::InvalidValue,
+        SubmitError::TimelineUnavailable => ErrorCode::CoreUnavailable,
+        SubmitError::QueueFull => ErrorCode::QueueFull,
+        SubmitError::Uninitialized
+        | SubmitError::Stopped
+        | SubmitError::QueueClosed
+        | SubmitError::CharacterUnavailable => ErrorCode::CoreUnavailable,
+    }
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+struct WireAudience {
+    #[serde(default)]
+    targets: Vec<ConversationSpeaker>,
+    #[serde(default)]
+    participants: Vec<ConversationSpeaker>,
+    #[serde(default)]
+    seen_by: Vec<CharacterId>,
+}
+
+impl WireAudience {
+    fn into_audience(self, sender: Option<CharacterId>) -> ConversationAudience {
+        let mut audience = ConversationAudience::default();
+        audience.targets.extend(self.targets);
+        audience.participants.extend(self.participants);
+        audience.seen_by.extend(self.seen_by);
+        if let Some(character) = sender {
+            audience.seen_by.insert(character);
+        }
+        audience
+    }
 }
 
 #[derive(Deserialize)]
@@ -220,7 +389,12 @@ struct Envelope {
 struct Receipt {
     command_id: Uuid,
     fingerprint: String,
-    handle: RequestHandle,
+    result: ReceiptResult,
+}
+
+enum ReceiptResult {
+    Generation(RequestHandle),
+    Published(EventId),
 }
 
 async fn send(
@@ -275,6 +449,7 @@ async fn client(
     config: Arc<ServerConfig>,
     parent_stop: CancellationToken,
     api: Arc<ApiBindings>,
+    server: ServerHandle,
 ) -> io::Result<()> {
     let stop = parent_stop.child_token();
     let client_id = Uuid::new_v4();
@@ -316,41 +491,88 @@ async fn client(
                 _ = stop.cancelled() => break,
                 line = read_command(&mut reader, config.max_command_bytes.get()) => match line? { Some(line) => line, None => break },
             };
-            let envelope = if line == "test" { Ok(Envelope { command_id: Uuid::new_v4(), command: Command::Test }) } else { serde_json::from_str::<Envelope>(&line) };
-            let envelope = match envelope {
+            let envelope = match decode(&line) {
                 Ok(envelope) => envelope,
-                Err(error) => { send(&outbound, json!({"type":"error","error":error.to_string()}), &stop).await?; continue; }
+                Err(error) => { send(&outbound, error, &stop).await?; continue; }
             };
             let fingerprint = serde_json::to_string(&envelope.command).map_err(io::Error::other)?;
             if let Some(receipt) = receipts.iter().find(|receipt| receipt.command_id == envelope.command_id) {
                 if receipt.fingerprint != fingerprint {
-                    send(&outbound, json!({"type":"error","command_id":envelope.command_id,"error":"command ID reused for different intent"}), &stop).await?;
+                    send(&outbound, error_response(Some(envelope.command_id), ErrorCode::CommandIdConflict, "command ID reused for different intent"), &stop).await?;
                 } else {
-                    send(&outbound, json!({"type":"accepted","command_id":envelope.command_id,"request_id":receipt.handle.id().0,"replayed":true}), &stop).await?;
-                    send(&outbound, status(&receipt.handle.snapshot()), &stop).await?;
+                    match &receipt.result {
+                        ReceiptResult::Generation(handle) => {
+                            send(&outbound, json!({"type":"accepted","command_id":envelope.command_id,"request_id":handle.id().0,"replayed":true}), &stop).await?;
+                            send(&outbound, status(&handle.snapshot()), &stop).await?;
+                        }
+                        ReceiptResult::Published(event) => {
+                            send(&outbound, json!({"type":"published","command_id":envelope.command_id,"event_id":event.0,"replayed":true}), &stop).await?;
+                        }
+                    }
                 }
                 continue;
             }
+            let track = matches!(envelope.command, Command::PublishMessage { .. } | Command::Reply { .. } | Command::React { .. } | Command::Initiate { .. });
+            let eviction = if track && receipts.len() >= config.receipt_capacity.get() {
+                match receipts.iter().position(|receipt| match &receipt.result {
+                    ReceiptResult::Published(_) => true,
+                    ReceiptResult::Generation(handle) => handle.snapshot().state.is_terminal(),
+                }) {
+                    Some(index) => Some(index),
+                    None => { send(&outbound, error_response(Some(envelope.command_id), ErrorCode::ReceiptCapacity, "too many tracked requests"), &stop).await?; continue; }
+                }
+            } else { None };
             match envelope.command {
-                Command::Test | Command::Reply { .. } => {
-                    if receipts.len() >= config.receipt_capacity.get() {
-                        if receipts.front().is_some_and(|receipt| receipt.handle.snapshot().state.is_terminal()) { receipts.pop_front(); }
-                        else { send(&outbound, json!({"type":"error","error":"too many tracked requests"}), &stop).await?; continue; }
+                Command::Ping {} => {
+                    send(&outbound, json!({"type":"pong", "command_id":envelope.command_id}), &stop).await?;
+                }
+                Command::Methods {} => {
+                    send(&outbound, json!({"type":"methods", "command_id":envelope.command_id, "methods":Method::ALL}), &stop).await?;
+                }
+                Command::ServerStatus {} => {
+                    let snapshot = server.snapshot();
+                    send(&outbound, json!({"type":"server_status", "command_id":envelope.command_id,
+                        "address":server.address(), "running":snapshot.running,
+                        "connected_clients":snapshot.connected_clients, "accepted_connections":snapshot.accepted_connections,
+                        "has_error":snapshot.last_error.is_some(),
+                        "limits":{"max_clients":config.max_clients, "outbound_capacity":config.outbound_capacity,
+                            "max_command_bytes":config.max_command_bytes, "receipt_capacity":config.receipt_capacity}}), &stop).await?;
+                }
+                Command::PublishMessage { event_id, occurred_at_unix_ms, speaker, content, audience } => {
+                    let mut message = ConversationMessage::new(event_id.to_string(), speaker, content, []);
+                    message.id = EventId(event_id);
+                    message.occurred_at_unix_ms = occurred_at_unix_ms;
+                    message.audience = audience.into_audience(None);
+                    match api.chat.publish_conversation_message(message) {
+                        Ok(event) => {
+                            if let Some(index) = eviction { receipts.remove(index); }
+                            send(&outbound, json!({"type":"published","command_id":envelope.command_id,"event_id":event.0,"replayed":false}), &stop).await?;
+                            receipts.push_back(Receipt { command_id: envelope.command_id, fingerprint, result: ReceiptResult::Published(event) });
+                        }
+                        Err(error) => send(&outbound, error_response(Some(envelope.command_id), submit_code(&error), error), &stop).await?,
                     }
-                    let (character, text) = match envelope.command {
-                        Command::Test => (config.test_character, "test".to_owned()),
-                        Command::Reply { character, text } => (character, text),
+                }
+                Command::Reply { .. } | Command::React { .. } | Command::Initiate { .. } => {
+                    let source = RequestSource::Client(client_id);
+                    let handle = match envelope.command {
+                        Command::Reply { character, message_id, audience } => {
+                            api.chat.send(ReplyRequest::new(character, EventId(message_id), source).with_audience(audience.into_audience(Some(character)))).map_err(|error| (submit_code(&error), error.to_string()))
+                        }
+                        Command::React { character, event_id, instruction, audience } => {
+                            api.chat.send(ReactRequest::new(character, EventId(event_id), instruction, source).with_audience(audience.into_audience(Some(character)))).map_err(|error| (submit_code(&error), error.to_string()))
+                        }
+                        Command::Initiate { character, instruction, audience } => {
+                            api.chat.send(InitiateRequest::new(character, instruction, source).with_audience(audience.into_audience(Some(character)))).map_err(|error| (submit_code(&error), error.to_string()))
+                        }
                         _ => unreachable!(),
                     };
-                    let voice = api.settings.snapshot::<VoiceSettings>().map_err(io::Error::other)?.value;
-                    let voice = if voice.in_game { VoicePlan::Synthesize(VoiceOptions { voice: voice.voice, volume: voice.volume }) } else { VoicePlan::Disabled };
-                    let request = UserInput::new(text).map(|input| ReplyRequest::new(character, config.preset.clone(), input, RequestSource::Client(client_id)).with_voice(voice));
-                    let handle = match request.map_err(|error| error.to_string()).and_then(|request| api.chat.send(request).map_err(|error| error.to_string())) {
+                    let handle = match handle {
                         Ok(handle) => handle,
-                        Err(error) => { send(&outbound, json!({"type":"error","command_id":envelope.command_id,"error":error}), &stop).await?; continue; }
+                        Err((code, error)) => { send(&outbound, error_response(Some(envelope.command_id), code, error), &stop).await?; continue; }
                     };
+                    if let Some(index) = eviction { receipts.remove(index); }
                     send(&outbound, json!({"type":"accepted","command_id":envelope.command_id,"request_id":handle.id().0,"replayed":false}), &stop).await?;
-                    receipts.push_back(Receipt { command_id: envelope.command_id, fingerprint, handle: handle.clone() });
+                    receipts.push_back(Receipt { command_id: envelope.command_id, fingerprint, result: ReceiptResult::Generation(handle.clone()) });
                     let outbound = outbound.clone();
                     let stop = stop.clone();
                     observers.spawn(async move {
@@ -362,19 +584,76 @@ async fn client(
                     });
                 }
                 Command::Cancel { request_id } => {
-                    let response = match receipts.iter().find(|receipt| receipt.handle.id() == RequestId(request_id)) {
-                        Some(receipt) => json!({"type":"cancel","request_id":request_id,"result":format!("{:?}", receipt.handle.cancel())}),
-                        None => json!({"type":"error","error":"request does not belong to this connection"}),
+                    let response = match receipts.iter().find_map(|receipt| match &receipt.result { ReceiptResult::Generation(handle) if handle.id() == RequestId(request_id) => Some(handle), _ => None }) {
+                        Some(handle) => json!({"type":"cancel","command_id":envelope.command_id,"request_id":request_id,"result":format!("{:?}", handle.cancel())}),
+                        None => error_response(Some(envelope.command_id), ErrorCode::OwnershipDenied, "request does not belong to this connection"),
                     };
                     send(&outbound, response, &stop).await?;
                 }
-                Command::Settings => {
-                    let snapshot = api.settings.snapshot_all().map_err(io::Error::other)?;
-                    send(&outbound, json!({"type":"settings","revision":snapshot.revision,"settings":snapshot.values}), &stop).await?;
+                Command::Diagnostics { character, request_id, section } => {
+                    let scope = DiagnosticScope::owner(character, RequestSource::Client(client_id));
+                    let response = match api.chat.diagnostics(scope) {
+                        Err(error) => error_response(Some(envelope.command_id), submit_code(&error), error),
+                        Ok(access) => {
+                            let section = match section.as_deref() {
+                                None => Ok(DiagnosticSection::All),
+                                Some(value) => DiagnosticSection::parse(value).ok_or_else(|| {
+                                    error_response(Some(envelope.command_id), ErrorCode::InvalidValue, "unknown diagnostic section")
+                                }),
+                            };
+                            match section {
+                                Err(error) => error,
+                                Ok(section) => match access.request(RequestId(request_id)) {
+                                    Err(error) => error_response(Some(envelope.command_id), diagnostic_code(&error), error),
+                                    Ok(record) => match record.export(section) {
+                                        Err(error) => error_response(Some(envelope.command_id), ErrorCode::InvalidValue, error),
+                                        Ok(text) => {
+                                            let content = serde_json::from_str::<Value>(&text).unwrap_or(Value::String(text));
+                                            json!({"type":"diagnostics", "command_id":envelope.command_id,
+                                                "request_id":request_id, "section":section.to_string(),
+                                                "content":content})
+                                        }
+                                    },
+                                },
+                            }
+                        }
+                    };
+                    send(&outbound, response, &stop).await?;
+                }
+                Command::DiagnosticsRecent { character, limit } => {
+                    let scope = DiagnosticScope::owner(character, RequestSource::Client(client_id));
+                    let response = match api.chat.diagnostics(scope) {
+                        Err(error) => error_response(Some(envelope.command_id), submit_code(&error), error),
+                        Ok(access) => match access.recent(limit.unwrap_or(16).clamp(1, 64)) {
+                            Err(error) => error_response(Some(envelope.command_id), diagnostic_code(&error), error),
+                            Ok(rows) => json!({"type":"diagnostics_recent", "command_id":envelope.command_id,
+                                "character":character, "requests":rows}),
+                        },
+                    };
+                    send(&outbound, response, &stop).await?;
+                }
+                Command::DiagnosticsErrors { character, limit } => {
+                    let scope = DiagnosticScope::owner(character, RequestSource::Client(client_id));
+                    let response = match api.chat.diagnostics(scope) {
+                        Err(error) => error_response(Some(envelope.command_id), submit_code(&error), error),
+                        Ok(access) => match access.errors(limit.unwrap_or(16).clamp(1, 64)) {
+                            Err(error) => error_response(Some(envelope.command_id), diagnostic_code(&error), error),
+                            Ok(errors) => json!({"type":"diagnostics_errors", "command_id":envelope.command_id,
+                                "character":character, "errors":errors}),
+                        },
+                    };
+                    send(&outbound, response, &stop).await?;
+                }
+                Command::Settings {} => {
+                    let response = match api.settings.snapshot_all() {
+                        Ok(snapshot) => json!({"type":"settings","command_id":envelope.command_id,"revision":snapshot.revision,"settings":snapshot.values}),
+                        Err(error) => error_response(Some(envelope.command_id), settings_code(&error), error),
+                    };
+                    send(&outbound, response, &stop).await?;
                 }
                 Command::SetVolume { value } => {
                     let result = api.settings.edit::<VoiceSettings>(|voice| voice.volume = value);
-                    let response = match result { Ok(snapshot) => json!({"type":"settings_applied","revision":snapshot.revision}), Err(error) => json!({"type":"error","error":error.to_string()}) };
+                    let response = match result { Ok(snapshot) => json!({"type":"settings_applied","command_id":envelope.command_id,"revision":snapshot.revision}), Err(error) => error_response(Some(envelope.command_id), settings_code(&error), error) };
                     send(&outbound, response, &stop).await?;
                 }
             }
@@ -390,17 +669,28 @@ async fn client(
 }
 
 pub fn status(snapshot: &RequestSnapshot) -> Value {
-    let mut message = json!({"type":"request_status","request_id":snapshot.metadata.id.0,"character":snapshot.metadata.character_id.to_string(),"revision":snapshot.revision});
+    status_with_audio(snapshot, true)
+}
+
+pub(crate) fn status_with_audio(snapshot: &RequestSnapshot, include_audio: bool) -> Value {
+    let mut message = json!({"type":"request_status","request_id":snapshot.metadata.id.0,"character":snapshot.metadata.character_id.to_string(),"revision":snapshot.revision,"can_cancel":snapshot.can_cancel()});
+    message["dataset_sample_id"] = json!(snapshot.dataset.sample_id);
+    if let Some(warning) = &snapshot.dataset.warning {
+        message["dataset_warning"] = json!(warning);
+    }
     match &snapshot.state {
         RequestState::Pending => message["state"] = json!("pending"),
         RequestState::Processing(stage) => {
             message["state"] = json!("processing");
             match stage {
                 ProcessingStage::GeneratingText => message["stage"] = json!("text"),
-                ProcessingStage::GeneratingVoice { text } => {
-                    message["stage"] = json!("voice");
-                    message["text"] = json!(text);
-                }
+                ProcessingStage::TextReady { .. } => message["stage"] = json!("text_ready"),
+                ProcessingStage::GeneratingVoice { .. } => message["stage"] = json!("voice"),
+                ProcessingStage::Accepting { .. } => message["stage"] = json!("accepting"),
+            }
+            if let Some(text) = snapshot.provisional_text() {
+                message["text"] = json!(text);
+                message["provisional"] = json!(true);
             }
         }
         RequestState::Cancelled => message["state"] = json!("cancelled"),
@@ -411,13 +701,14 @@ pub fn status(snapshot: &RequestSnapshot) -> Value {
                     message["outcome"] = json!("success");
                     message["text"] = json!(response.text);
                     message["event_id"] = json!(response.event_id);
-                    if let Some(audio) = &response.audio {
+                    if include_audio && let Some(audio) = &response.audio {
                         message["audio"] = json!({"format":"wave","bytes":audio.bytes.as_ref()});
                     }
                 }
                 RequestOutcome::VoiceGenerationFailed { response, error } => {
                     message["outcome"] = json!("voice_error");
                     message["text"] = json!(response.text);
+                    message["event_id"] = json!(response.event_id);
                     message["error"] = json!(error.to_string());
                 }
                 RequestOutcome::TextGenerationFailed(error) => {

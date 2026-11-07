@@ -1,0 +1,33 @@
+import { SettingsSectionHeading } from "../components/settings-kit.slint";
+import { SettingsTheme } from "theme.slint";
+import { Caption, Field, HeaderButton, Glyph } from "../sandbox/controls.slint";
+export component Card inherits Rectangle {
+    background: SettingsTheme.canvas; border-radius: 14px; border-width: 1px; border-color: SettingsTheme.border;
+    @children
+}
+
+export component SettingsLabel inherits Caption { font-family: SettingsTheme.font-family; }
+export component SettingsField inherits Field {
+    font-family: SettingsTheme.font-family;
+    background: root.enabled ? SettingsTheme.field : SettingsTheme.input;
+    text-color: root.enabled ? SettingsTheme.text : SettingsTheme.muted;
+    border-color: !root.enabled ? SettingsTheme.border : root.focused ? SettingsTheme.field-focus-border : SettingsTheme.field-border;
+    border-radius: 10px;
+}
+export component SettingsButton inherits HeaderButton {
+    font-family: SettingsTheme.font-family;
+    font-weight: 700;
+    horizontal-padding: 16px;
+    background: root.selected ? SettingsTheme.accent : self.pressed ? SettingsTheme.button-pressed : self.hovered ? SettingsTheme.button-hover : SettingsTheme.button;
+    border-color: self.hovered ? SettingsTheme.button-hover-border : SettingsTheme.button-border;
+}
+
+export component EditorField inherits VerticalLayout {
+    in property <string> title;
+    in-out property <string> text;
+    height: 64px; spacing: 6px; padding: 0px;
+    SettingsLabel { text: root.title; font-size: 12px; color: SettingsTheme.muted; }
+    SettingsField { text <=> root.text; height: 40px; }
+}
+
+export component SectionHeading inherits SettingsSectionHeading {}
