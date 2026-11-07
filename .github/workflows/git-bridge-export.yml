@@ -1,0 +1,63 @@
+name: Git Bridge - export repository bundle
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/git-bridge-export.yml
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    name: Export reachable Git history
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out complete history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          lfs: false
+          submodules: false
+
+      - name: Fetch all fork branches and tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-recurse-submodules --prune origin \
+            '+refs/heads/*:refs/remotes/origin/*' \
+            '+refs/tags/*:refs/tags/*'
+          git show-ref > repository.refs
+          echo "Fetched refs: $(wc -l < repository.refs)"
+          echo "HEAD: $(git rev-parse HEAD)"
+
+      - name: Create and verify Git bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          git bundle create repository.bundle --all
+          git bundle verify repository.bundle
+          sha256sum repository.bundle > repository.bundle.sha256
+          git bundle list-heads repository.bundle > repository.bundle.heads
+          printf 'repository=%s\nhead=%s\n' "$GITHUB_REPOSITORY" "$(git rev-parse HEAD)" > repository.metadata
+          cat repository.bundle.sha256
+          du -h repository.bundle
+
+      - name: Upload bundle and integrity metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: git-bridge-repository-bundle
+          path: |
+            repository.bundle
+            repository.bundle.sha256
+            repository.bundle.heads
+            repository.refs
+            repository.metadata
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
