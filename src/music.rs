@@ -59,7 +59,10 @@ impl BeatCacheKey {
 
     pub fn validate(&self) -> Result<(), BeatCacheError> {
         if self.source_sha256.len() != 64
-            || !self.source_sha256.bytes().all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+            || !self
+                .source_sha256
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
             || !valid_revision(&self.backend_revision)
             || !valid_revision(&self.decoder_revision)
             || !valid_revision(&self.analysis_settings_revision)
@@ -71,9 +74,7 @@ impl BeatCacheKey {
 }
 
 fn valid_revision(value: &str) -> bool {
-    !value.is_empty()
-        && value.len() <= 128
-        && value.bytes().all(|byte| byte.is_ascii_graphic())
+    !value.is_empty() && value.len() <= 128 && value.bytes().all(|byte| byte.is_ascii_graphic())
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {
@@ -188,7 +189,10 @@ impl BeatCache {
     fn cache_path(&self, key: &BeatCacheKey) -> Result<PathBuf, BeatCacheError> {
         key.validate()?;
         let identity = serde_json::to_vec(key).map_err(|_| BeatCacheError::InvalidKey)?;
-        Ok(self.root.join(format!("beat-v{CACHE_FORMAT_VERSION}-{}.json", sha256_hex(&identity))))
+        Ok(self.root.join(format!(
+            "beat-v{CACHE_FORMAT_VERSION}-{}.json",
+            sha256_hex(&identity)
+        )))
     }
 
     pub fn lookup(&self, key: &BeatCacheKey) -> Result<CacheLookup, BeatCacheError> {
@@ -202,7 +206,9 @@ impl BeatCache {
             return Ok(CacheLookup::Corrupt);
         }
         let mut content = Vec::new();
-        fs::File::open(&path)?.take(MAX_CACHE_BYTES + 1).read_to_end(&mut content)?;
+        fs::File::open(&path)?
+            .take(MAX_CACHE_BYTES + 1)
+            .read_to_end(&mut content)?;
         if content.len() as u64 > MAX_CACHE_BYTES {
             return Ok(CacheLookup::Corrupt);
         }
@@ -235,7 +241,10 @@ impl BeatCache {
         fs::create_dir_all(&self.root)?;
         let staging = target.with_extension(format!("{}.tmp", Uuid::new_v4()));
         let result = (|| -> io::Result<()> {
-            let mut file = OpenOptions::new().write(true).create_new(true).open(&staging)?;
+            let mut file = OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&staging)?;
             file.write_all(&payload)?;
             file.sync_all()?;
             fs::rename(&staging, &target)
