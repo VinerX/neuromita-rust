@@ -5,8 +5,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - .github/workflows/git-bridge-export.yml
 
 permissions:
   contents: read
